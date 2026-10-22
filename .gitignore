@@ -1,0 +1,25 @@
+# Secrets: API keys and the database address live only in .env (copy .env.example).
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Voice models (large, downloaded on the laptop)
+models/
+
+# Local editor and Claude Code settings
+.claude/
+.vscode/
+.idea/
+.DS_Store
+*.log

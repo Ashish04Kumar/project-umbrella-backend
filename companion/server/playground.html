@@ -1,0 +1,1749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companion Playground</title>
+<!-- Front-end plugins (e.g. the 3D robot) import three.js by name; this maps it to a fixed version (same as the app). -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+} }
+</script>
+<style>
+  :root {
+    --bg: #fbf6f3; --panel: #ffffff; --panel-2: #f4ece7; --text: #2a1d22; --muted: #7d6a70;
+    --line: #eadcd5; --accent: #e8705a; --accent-text: #ffffff; --me: #e8705a; --me-text: #ffffff;
+    --bot: #ffffff; --chip: #f6e3dc; --ok: #2f8f5b; --bad: #c2413b; --shadow: 0 1px 2px rgba(42,29,34,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17111c; --panel: #211828; --panel-2: #2a2033; --text: #f5e9ee; --muted: #a8949f;
+      --line: #3a2d43; --accent: #ff8a70; --accent-text: #23121a; --me: #ff8a70; --me-text: #23121a;
+      --bot: #2a2033; --chip: #3a2a3a; --ok: #6fd39b; --bad: #ff8b84; --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17111c; --panel: #211828; --panel-2: #2a2033; --text: #f5e9ee; --muted: #a8949f;
+    --line: #3a2d43; --accent: #ff8a70; --accent-text: #23121a; --me: #ff8a70; --me-text: #23121a;
+    --bot: #2a2033; --chip: #3a2a3a; --ok: #6fd39b; --bad: #ff8b84; --shadow: none;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .app { display: grid; grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: auto minmax(0, 1fr); height: 100vh; height: 100dvh; }
+  header { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0 8px 0 0; }
+  header .grow { flex: 1; }
+  input, button { font: inherit; color: inherit; }
+  input { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  select {
+    font: inherit; color: var(--text); background-color: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 7px 30px 7px 10px; cursor: pointer; appearance: none; -webkit-appearance: none; max-width: 100%;
+    /* a small chevron drawn with two gradients, so it follows the theme colours */
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size: 5px 5px; background-repeat: no-repeat;
+  }
+  select:hover, select:focus-visible { border-color: var(--accent); outline: none; }
+  select option { background: var(--panel); color: var(--text); }
+  [hidden] { display: none !important; }
+  .pick { display: inline-flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); overflow: hidden; }
+  .pick span { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 8px 0 10px; text-transform: uppercase; letter-spacing: .04em; }
+  .pick select { border: 0; border-left: 1px solid var(--line); border-radius: 0; background-color: var(--panel); }
+  #user { width: 170px; }
+  #threadSelect { width: 210px; }
+  @media (max-width: 820px) { #user, #threadSelect { width: auto; max-width: 46vw; } }
+  button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { font-size: 13px; color: var(--muted); }
+  .chat { display: flex; flex-direction: column; min-height: 0; }
+  .log { flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; gap: 8px; max-width: 760px; }
+  .row.me { align-self: flex-end; flex-direction: row-reverse; }
+  .face { width: 34px; height: 34px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; font-size: 19px; flex: none; }
+  .bubble { padding: 9px 13px; border-radius: 16px; background: var(--bot); box-shadow: var(--shadow); border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .me .bubble { background: var(--me); color: var(--me-text); border-color: transparent; }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { background: var(--chip); border-radius: 999px; padding: 1px 8px; }
+  .meta a { color: var(--accent); }
+  .thinking .bubble { color: var(--muted); font-style: italic; }
+  /* Token counter: per-reply tokens are added here while it runs (Start), frozen on Stop, cleared by Reset. */
+  .tokbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 16px; border-top: 1px solid var(--line); background: var(--panel-2); font-size: 12px; color: var(--muted); }
+  .tokbar button { padding: 3px 10px; font-size: 12px; border-radius: 8px; }
+  .tokbar button.on { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  .tokbar b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .tokbar .tokstate { font-weight: 600; }
+  .meta .tok { font-variant-numeric: tabular-nums; cursor: help; }
+  form.send { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--panel); }
+  form.send input { flex: 1; }
+  #text.hearing { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); font-style: italic; }
+  aside { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs button { flex: 1 0 auto; border: 0; border-radius: 0; background: transparent; padding: 10px 9px; color: var(--muted); font-size: 13px; }
+  .tabs button[aria-selected="true"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); font-weight: 600; }
+  .panel { overflow-y: auto; padding: 12px; flex: 1; }
+  .item { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel-2); }
+  .item .k { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+  .item .x { border: 0; background: transparent; color: var(--bad); padding: 0 2px; }
+  button.clear { margin: 2px 0 10px; font-size: 12px; color: var(--bad); background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; }
+  .reminder-card .sub { color: var(--muted); font-size: 12px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .choices .choice { padding: 5px 10px; border-radius: 999px; font-size: 13px; }
+  .panel .sub { color: var(--muted); font-size: 12px; margin: 8px 0 4px; }
+  .item .acts { display: inline-flex; gap: 2px; flex: none; }
+  .item .x.edit { color: var(--text); }
+  .item.editing { border-color: var(--accent); }
+  .edit-form { display: grid; gap: 6px; }
+  .edit-form label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+  .edit-form label.check { display: flex; align-items: center; gap: 6px; color: var(--text); }
+  .edit-form input:not([type=checkbox]), .edit-form textarea, .edit-form select { font: inherit; font-size: 13px; color: var(--text); width: 100%; padding: 6px 8px; }
+  .edit-form textarea { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
+  .edit-form .buttons { display: flex; gap: 6px; }
+  .edit-form .buttons button { padding: 5px 12px; }
+  .edit-error { color: var(--bad); font-size: 12px; }
+  .say { border: 1px dashed var(--line); border-radius: 12px; background: var(--panel-2); margin-bottom: 10px; font-size: 13px; }
+  .say summary { cursor: pointer; padding: 7px 10px; font-weight: 600; }
+  .say .body { padding: 0 10px 8px; }
+  .say .kw { color: var(--muted); font-size: 12px; margin: 2px 0 6px; }
+  .say .kw b { color: var(--text); }
+  .say button.ex { display: block; width: 100%; text-align: left; margin: 4px 0; padding: 5px 8px; font-size: 12.5px; border-radius: 8px; background: var(--panel); }
+  .say button.ex:hover { border-color: var(--accent); }
+  .reminder-card .buttons { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .reminder-card .buttons button { border-radius: 10px; padding: 6px 10px; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 12px 0 6px; }
+  .empty { color: var(--muted); font-size: 14px; }
+  button.mic.recording { background: var(--bad); color: #fff; border-color: transparent; }
+  .speak { border: 0; background: transparent; padding: 0 4px; font-size: 13px; }
+  .speed { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .speed input { padding: 0; width: 90px; accent-color: var(--accent); }
+  button.live.on { background: var(--ok); color: #fff; border-color: transparent; }
+  .livebar { display: none; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); font-size: 14px; }
+  .livebar.on { display: flex; }
+  .livebar .big { font-size: 26px; }
+  .livelog { display: none; border-bottom: 1px solid var(--line); background: var(--panel); font-size: 12.5px; }
+  .livelog.on { display: block; }
+  .livelog summary { cursor: pointer; padding: 6px 16px; font-weight: 600; }
+  #livelogList { max-height: 150px; overflow-y: auto; padding: 0 16px 8px; }
+  .lt { display: grid; grid-template-columns: 58px 22px minmax(0, 1fr); gap: 4px; padding: 2px 0; border-top: 1px dashed var(--line); }
+  .lt .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .lt b { font-weight: 600; }
+  .lt .why { color: var(--muted); }
+  /* --- Trace panel --- */
+  button.trace.on { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  .trace-panel { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: none; flex-direction: column; }
+  .trace-panel.on { display: flex; }
+  .trace-head { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  .trace-head h2 { font-size: 16px; margin: 0; }
+  .trace-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr); }
+  .trace-col { min-height: 0; overflow-y: auto; padding: 12px; border-right: 1px solid var(--line); }
+  .trace-col:last-child { border-right: 0; }
+  .trace-col > h3:first-child { margin-top: 0; }
+  .note { font-size: 12px; color: var(--muted); background: var(--panel-2); border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+  .turn { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); margin-bottom: 12px; overflow: hidden; }
+  .turn-head { padding: 8px 12px; background: var(--panel-2); font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .turn-head b { font-size: 14px; }
+  .step { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 6px; padding: 7px 12px; border-top: 1px solid var(--line); font-size: 13px; }
+  .step .ic { font-size: 16px; line-height: 1.3; }
+  .step .ttl { font-weight: 600; }
+  .step .sub { color: var(--muted); font-size: 12px; }
+  .step pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0; font: 12px/1.45 ui-monospace, Menlo, monospace; background: var(--panel-2); border-radius: 8px; padding: 6px 8px; max-height: 260px; overflow: auto; }
+  .step details summary { cursor: pointer; color: var(--accent); font-size: 12px; margin-top: 3px; }
+  .step.new { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { background: var(--chip); } to { background: transparent; } }
+  .badge { display: inline-block; border-radius: 999px; padding: 0 7px; font-size: 11px; font-weight: 600; background: var(--chip); }
+  .badge.save, .badge.ok, .badge.window { background: color-mix(in srgb, var(--ok) 22%, transparent); }
+  .badge.ask, .badge.summary { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+  .badge.ignore, .badge.failed, .badge.stored { background: color-mix(in srgb, var(--muted) 22%, transparent); }
+  .badge.prompt { background: color-mix(in srgb, var(--accent) 40%, transparent); }
+  .mem { border: 1px solid var(--line); border-radius: 10px; padding: 6px 9px; margin-bottom: 6px; background: var(--panel); font-size: 13px; }
+  .mem .k { font-size: 11px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .mem.changed { box-shadow: 0 0 0 2px var(--accent); }
+  .msg { font-size: 12px; padding: 4px 8px; border-left: 3px solid var(--line); margin-bottom: 4px; }
+  .msg.window { border-left-color: var(--ok); }
+  .msg.summary { border-left-color: var(--accent); opacity: .75; }
+  .msg.stored { opacity: .55; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+  .live-dot.on { background: var(--ok); }
+  .objbtn { border: 0; background: transparent; color: var(--accent); font: 600 11px ui-monospace, Menlo, monospace; padding: 2px 4px; margin-top: 2px; cursor: pointer; }
+  .objview { margin: 4px 0 0; max-width: min(640px, 80vw); white-space: pre; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, monospace; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; max-height: 380px; }
+  .obj-label { font-size: 12px; font-weight: 700; margin: 8px 12px 0; display: flex; gap: 6px; align-items: center; }
+  .obj { margin: 4px 12px 10px; white-space: pre; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, monospace; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; max-height: 420px; }
+  .test-ask { border-top: 0; border-bottom: 1px solid var(--line); }
+  .step.you { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .test-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 320px); }
+  #testPanel .trace-head input { padding: 4px 8px; }
+  .intent { font-size: 12px; padding: 4px 6px; border-radius: 8px; margin-bottom: 3px; color: var(--muted); }
+  .intent.done { color: var(--text); }
+  .intent.now { background: var(--chip); color: var(--text); font-weight: 600; }
+  .step.sim .ttl, .step.reply .ttl { font-size: 13px; }
+  .step.reply { background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .step.bad { background: color-mix(in srgb, var(--bad) 10%, transparent); }
+  .msgline { border-left: 3px solid var(--line); padding-left: 6px; margin: 4px 0; }
+  .msgline b { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+  @media (max-width: 1000px) { .test-cols { display: block; overflow-y: auto; } }
+  @media (max-width: 1000px) { .trace-cols { grid-template-columns: 1fr; } .trace-col { border-right: 0; border-bottom: 1px solid var(--line); max-height: none; } .trace-cols { overflow-y: auto; display: block; } }
+  .stage { display: none; position: relative; height: 270px; border-bottom: 1px solid var(--line); background: radial-gradient(ellipse at 50% 60%, var(--panel-2), var(--bg) 70%); }
+  .stage.on { display: block; }
+  .stage > div { position: absolute; inset: 0; }
+  .stage canvas { width: 100%; height: 100%; display: block; }
+  .robot-label { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-size: 13px; color: var(--muted); pointer-events: none; }
+  @media (max-width: 820px) { .stage { height: 200px; } }
+  .toast { position: fixed; right: 16px; bottom: 84px; background: var(--accent); color: var(--accent-text); padding: 12px 16px; border-radius: 14px; font-weight: 600; box-shadow: 0 6px 24px rgba(0,0,0,.25); max-width: calc(100vw - 32px); }
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) 40vh; height: 100dvh; }
+    aside { border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Companion Playground</h1>
+    <label class="pick" title="Users in the database. Each user is separate.">
+      <span>User</span>
+      <select id="user"></select>
+    </label>
+    <!-- One consumer = one thread for now: the thread picker and "New thread" stay hidden (the backend still supports threads). -->
+    <label class="pick" hidden title="This user's threads. Each thread has its own chat, memory, notes, reminders, to-dos and lists.">
+      <span>Thread</span>
+      <select id="threadSelect"></select>
+    </label>
+    <button id="newConv" type="button" hidden title="Open a new thread for this user. It starts empty: its own chat and memory.">＋ New thread</button>
+    <button id="liveBtn" class="live" type="button" title="Real-time voice: talk freely, interrupt any time">📞 Live</button>
+    <button id="traceBtn" class="trace" type="button" title="See what the agent does at every step, and its memory">🧠 Trace</button>
+    <button id="testBtn" class="trace" type="button" title="A simulated consumer chats with Buddy in a new thread; see what goes to the LLM and what comes back">🧪 Test</button>
+    <span class="grow"></span>
+    <label class="speed">Voice speed <input id="speed" type="range" min="0.7" max="1.4" step="0.05" value="1"> <span id="speedValue">1.00×</span></label>
+    <span class="status" id="health">connecting…</span>
+  </header>
+
+  <section class="chat">
+    <div class="stage" id="stage" aria-label="Buddy"></div>
+    <div class="livebar" id="livebar"><span class="big" id="liveFace">🙂</span><span id="liveState">connecting…</span><span class="status">Use earphones so Buddy doesn't hear itself.</span></div>
+    <details class="livelog" id="livelog"><summary>🎛️ Turn taking, live <span class="status">(why Buddy waited, answered or stopped)</span></summary><div id="livelogList"></div></details>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="tokbar" id="tokbar" title="Start counts the LLM tokens of every reply from now on; Stop freezes the total; Reset clears it.">
+      <span>🪙 Tokens</span>
+      <button id="tokToggle" type="button">▶ Start</button>
+      <button id="tokReset" type="button">↺ Reset</button>
+      <span class="tokstate" id="tokState">off</span>
+      <span><b id="tokTime">0:00</b></span>
+      <span><b id="tokChats">0</b> replies</span>
+      <span><b id="tokCalls">0</b> LLM calls</span>
+      <span>in <b id="tokIn">0</b></span>
+      <span>out <b id="tokOut">0</b></span>
+      <span>total <b id="tokTotal">0</b></span>
+    </div>
+    <form class="send" id="form">
+      <input id="text" placeholder="Buddy se baat karo… (e.g. kal 9 baje dawai yaad dilana)" autocomplete="off" required>
+      <button class="mic" id="micBtn" type="button" title="Push-to-talk: click, speak, click again to send (words only)">🎤</button>
+      <button class="mic" id="cueMicBtn" type="button" title="Push-to-talk with voice cues: like 🎤, plus how you sounded (pauses, pace, loudness...) goes to the LLM, like Live">🎙️✨</button>
+      <button class="primary" id="sendBtn">Send</button>
+    </form>
+  </section>
+
+  <aside>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="memory" aria-selected="true" title="Lasting facts: profile, people, birthdays, preferences, projects">Long-term</button>
+      <button role="tab" data-tab="short" aria-selected="false" title="Things for the next 10 days">Short-term</button>
+      <button role="tab" data-tab="notes" aria-selected="false">Notes</button>
+      <button role="tab" data-tab="reminders" aria-selected="false">Reminders</button>
+      <button role="tab" data-tab="todos" aria-selected="false">To-dos</button>
+      <button role="tab" data-tab="lists" aria-selected="false">Lists</button>
+      <button role="tab" data-tab="chat" aria-selected="false" title="What of the conversation goes to the LLM: recent messages and the running summary">Chat</button>
+    </div>
+    <div class="panel" id="panel"></div>
+  </aside>
+</div>
+
+<section class="trace-panel" id="tracePanel" aria-label="Agent trace">
+  <div class="trace-head">
+    <h2>🧠 Agent trace</h2>
+    <span class="status"><span class="live-dot" id="traceDot"></span> <span id="traceStatus">connecting…</span></span>
+    <span class="grow"></span>
+    <button id="traceClose" type="button">✕ Close</button>
+  </div>
+  <div class="trace-cols">
+    <div class="trace-col" id="stmCol">
+      <h3>Short-term memory</h3>
+      <div id="stm"></div>
+    </div>
+    <div class="trace-col" id="ltmCol">
+      <h3>Long-term memory</h3>
+      <div id="ltm"></div>
+    </div>
+    <div class="trace-col" id="dbCol">
+      <h3>Memory objects (DB)</h3>
+      <div class="note">Exactly what is stored in Postgres for this user: each table's schema and its rows (long-term = <code>memories</code>; short-term = <code>conversations</code> + <code>messages</code>).</div>
+      <div id="db"></div>
+    </div>
+  </div>
+</section>
+
+<section class="trace-panel" id="testPanel" aria-label="Consumer test">
+  <div class="trace-head">
+    <h2>🧪 Consumer test</h2>
+    <label class="status" for="testUser">User</label>
+    <select id="testUser"><option value="consumer1">consumer1</option><option value="consumer2">consumer2</option></select>
+    <label class="status" for="testTurns">Turns</label>
+    <input id="testTurns" type="number" min="1" max="60" value="30" style="width: 64px">
+    <label class="status" for="testGap">Gap (s)</label>
+    <input id="testGap" type="number" min="0" max="120" value="20" style="width: 64px">
+    <button id="testStart" class="primary" type="button">▶ Start</button>
+    <button id="testStop" type="button" disabled>■ Stop</button>
+    <button id="testOpen" type="button" disabled title="Open this consumer's chat">Open chat</button>
+    <span class="status"><span class="live-dot" id="testDot"></span> <span id="testStatus">idle</span></span>
+    <span class="grow"></span>
+    <button id="testClose" type="button">✕ Close</button>
+  </div>
+  <form class="send test-ask" id="testAsk">
+    <input id="testAskText" placeholder="Ask Buddy something yourself, as this consumer (works during a test too)" autocomplete="off" required>
+    <button class="primary" type="submit">Send</button>
+  </form>
+  <div class="test-cols">
+    <div class="trace-col" id="testFeed"><div class="note">Start a test: another LLM plays Rohan, a working professional, and chats with Buddy through a normal day as the chosen consumer (that consumer's own chat and memory). Each turn shows what Rohan said, the whole request sent to the LLM, what the LLM sent back, what the tools did, and Buddy's reply.</div></div>
+    <div class="trace-col" id="testIntents"><h3>Plan for the day</h3><div class="note">One intent per message. Rohan writes the words himself and answers Buddy's questions first.</div><div id="intentList"></div></div>
+  </div>
+</section>
+
+<script>
+const FACES = { happy: "😊", curious: "🤔", concerned: "🫂", playful: "😜", idle: "🙂" };
+const $ = (id) => document.getElementById(id);
+let tab = "memory";
+
+function store(key, value) {
+  try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { return null; }
+}
+const userId = () => $("user").value.trim() || "ashish";
+// Which chat is open: "main" (your own ongoing chat with Buddy, never reset) or a separate thread.
+let currentThread = "main";
+// Users: every user in the database, plus "New user…". The chosen user's threads, chat, memory and
+// data load below; each thread of a user has its own memory and data.
+async function loadUsers(selected) {
+  const select = $("user");
+  let want = selected || store("companion.user") || "ashish";
+  let users = [];
+  try { ({ users } = await api("/v1/users")); } catch { /* server restarting */ }
+  select.textContent = "";
+  if (!selected && users.length && !users.some((u) => u.id === want)) {
+    // The remembered user was deleted (the database was wiped, 21 Oct): open "ashish" or the first user
+    // instead of bringing the old name back.
+    want = (users.find((u) => u.id === "ashish") || users[0]).id;
+    store("companion.user", want);
+  }
+  if (!users.some((u) => u.id === want)) users.unshift({ id: want, threads: 0 });   // a new user, before its first message
+  for (const u of users) {
+    const option = el("option", "", u.threads ? `${u.id} · ${u.threads} thread${u.threads === 1 ? "" : "s"}` : `${u.id} · empty`);
+    option.value = u.id;
+    select.append(option);
+  }
+  const add = el("option", "", "➕ New user…"); add.value = "__new__";
+  select.append(add);
+  select.value = want;
+}
+function selectUser(id) {
+  store("companion.user", id);
+  loadUsers(id).then(() => {
+    openThread("main");   // a user starts on their own main thread
+    if (traceOpen) connectTrace();
+  });
+}
+{ const first = el("option", "", store("companion.user") || "ashish"); first.value = store("companion.user") || "ashish"; $("user").append(first); }
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+// Buddy asked "Where should I save “…”? (reminder / to-do / …)": one button per place.
+function placeButtons(row, text) {
+  const match = /Where should I save .*\?\s*\(([^)]+)\)\s*$/.exec(text || "");
+  if (!row || !match) return;
+  const box = el("div", "choices");
+  for (const place of match[1].split("/").map((p) => p.trim()).filter(Boolean)) {
+    const button = el("button", "choice", place);
+    button.type = "button";
+    button.onclick = () => {
+      box.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+      $("text").value = `Save it in ${place}.`;
+      $("form").requestSubmit();
+    };
+    box.append(button);
+  }
+  (row.lastChild || row).append(box);
+}
+
+function addRow(role, text, extra = {}) {
+  const row = el("div", "row " + (role === "user" ? "me" : "bot"));
+  if (role !== "user") row.append(el("div", "face", FACES[extra.expression] || FACES.idle));
+  const body = el("div");
+  body.append(el("div", "bubble", text));
+  if (extra.meta) body.append(extra.meta);
+  if (role !== "user" && text) {
+    const speak = el("button", "speak", "🔊");
+    speak.type = "button"; speak.title = "Say it aloud";
+    speak.onclick = () => sayAloud(text);
+    (extra.meta || body).append(speak);
+  }
+  row.append(body);
+  $("log").append(row);
+  $("log").scrollTop = $("log").scrollHeight;
+  return row;
+}
+
+// A small { } button under a chat bubble: shows the raw object of that message.
+// Your message: what went to the backend. Buddy's reply: the whole object that came back.
+function attachObject(row, label, object) {
+  if (!row || !object) return;
+  const body = row.lastChild;
+  const button = el("button", "objbtn", `{ } ${label}`);
+  button.type = "button";
+  let view = null;
+  button.onclick = () => {
+    if (view) { view.remove(); view = null; return; }
+    view = el("div", "objview", JSON.stringify(object, null, 2));
+    button.after(view);
+  };
+  body.append(button);
+}
+
+// --- token counts -------------------------------------------------------------------------------
+// Every reply object carries `usage` (input/output tokens of each LLM call in that turn). The line under
+// a reply shows that turn's numbers; the bar above the input adds them up while the counter runs.
+const tokens = { running: false, since: 0, elapsed: 0, replies: 0, calls: 0, input: 0, output: 0, timer: null };
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
+
+function tokenTag(usage) {
+  const calls = usage.calls || [];
+  const think = usage.reasoning ? ` (think ${fmt(usage.reasoning)})` : "";
+  const tag = el("span", "tok", `🪙 in ${fmt(usage.input)} · out ${fmt(usage.output)}${think} · ${calls.length} call${calls.length === 1 ? "" : "s"}`);
+  tag.title = calls.length
+    ? calls.map((c, i) => `${i + 1}. ${c.provider}: in ${fmt(c.input)}, out ${fmt(c.output)}${c.reasoning ? ` (think ${fmt(c.reasoning)})` : ""}${c.reported ? "" : " (provider sent no counts)"}`).join("\n")
+    : "No LLM call this turn";
+  return tag;
+}
+
+function countTokens(usage) {
+  if (!tokens.running || !usage) return;
+  tokens.replies += 1;
+  tokens.calls += (usage.calls || []).length;
+  tokens.input += usage.input || 0;
+  tokens.output += usage.output || 0;
+  showTokens();
+}
+
+function tokenSeconds() {
+  return Math.floor((tokens.elapsed + (tokens.running ? Date.now() - tokens.since : 0)) / 1000);
+}
+
+function showTokens() {
+  const s = tokenSeconds();
+  $("tokTime").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  $("tokChats").textContent = fmt(tokens.replies);
+  $("tokCalls").textContent = fmt(tokens.calls);
+  $("tokIn").textContent = fmt(tokens.input);
+  $("tokOut").textContent = fmt(tokens.output);
+  $("tokTotal").textContent = fmt(tokens.input + tokens.output);
+  const started = tokens.replies || tokenSeconds();
+  $("tokState").textContent = tokens.running ? "● counting" : started ? "stopped: total" : "off";
+  $("tokToggle").textContent = tokens.running ? "⏸ Stop" : "▶ Start";
+  $("tokToggle").classList.toggle("on", tokens.running);
+}
+
+$("tokToggle").onclick = () => {
+  if (tokens.running) {
+    tokens.elapsed += Date.now() - tokens.since;
+    tokens.running = false;
+    clearInterval(tokens.timer);
+  } else {
+    tokens.running = true;
+    tokens.since = Date.now();
+    tokens.timer = setInterval(showTokens, 1000);
+  }
+  showTokens();
+};
+$("tokReset").onclick = () => {
+  Object.assign(tokens, { elapsed: 0, since: Date.now(), replies: 0, calls: 0, input: 0, output: 0 });
+  showTokens();
+};
+
+function metaFor(reply) {
+  const meta = el("div", "meta");
+  meta.append(el("span", "tag", reply.expression));
+  if (reply.ms !== undefined) meta.append(el("span", "", (reply.ms / 1000).toFixed(1) + " s"));
+  if (reply.provider) meta.append(el("span", "", reply.provider));
+  if (reply.usage && reply.usage.calls) { meta.append(tokenTag(reply.usage)); countTokens(reply.usage); }
+  for (const tool of reply.tools_used || []) meta.append(el("span", "tag", "🔧 " + tool));
+  for (const url of (reply.sources || []).slice(0, 3)) {
+    const link = el("a", "", new URL(url).hostname.replace(/^www\./, ""));
+    link.href = url; link.target = "_blank"; link.rel = "noopener";
+    meta.append(link);
+  }
+  return meta;
+}
+
+async function api(path, options) {
+  const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+  if (!response.ok) throw new Error(response.status + " " + (await response.text()).slice(0, 200));
+  return response.json();
+}
+
+async function loadHistory() {
+  $("log").textContent = "";
+  try {
+    const { messages } = await api(`/v1/users/${encodeURIComponent(userId())}/history?limit=40&thread=${currentThread}`);
+    if (!messages.length) addRow("assistant", "Hi! Main Buddy hoon. Kuch bhi poocho, ya kaam bolo (reminder, list, note, yaad rakhna).");
+    for (const m of messages) addRow(m.role, m.content, { expression: m.expression });
+  } catch (error) { addRow("assistant", "Could not load history: " + error.message); }
+}
+
+// --- Body bus: front-end plugins (the 3D robot) listen to what Buddy is doing ------------------------
+// Events: "state" (idle | listening | thinking | speaking | error), "expression" (reply mood), "level" (0..1).
+const body = (() => {
+  const handlers = {};
+  return {
+    on(type, fn) { (handlers[type] ||= new Set()).add(fn); return () => handlers[type].delete(fn); },
+    emit(type, value) { for (const fn of handlers[type] || []) { try { fn(value); } catch (error) { console.error("plugin", error); } } },
+  };
+})();
+let errorTimer = null;
+function bodyError() {
+  body.emit("state", "error");
+  clearTimeout(errorTimer);
+  errorTimer = setTimeout(() => body.emit("state", "idle"), 3000);
+}
+// Loudness (RMS of -1..1 samples) to 0..1, like the app's mic meter: normal speech fills most of the range.
+const levelFromRms = (rms) => Math.min(1, Math.max(0, (20 * Math.log10(Math.max(rms, 1e-6)) + 50) / 42));
+
+// Buddy's voice level for the robot's mouth: computed from each WAV (20 ms steps) and read while it plays.
+function voiceEnvelope(blob) {
+  return blob.arrayBuffer().then((buffer) => {
+    const view = new DataView(buffer);
+    const rate = view.getUint32(24, true);
+    const samples = new Int16Array(buffer, 44, Math.floor((buffer.byteLength - 44) / 2));
+    const step = Math.max(1, Math.round(rate * 0.02));
+    const env = [];
+    for (let i = 0; i < samples.length; i += step) {
+      let sum = 0;
+      const end = Math.min(samples.length, i + step);
+      for (let j = i; j < end; j++) { const v = samples[j] / 32768; sum += v * v; }
+      env.push(levelFromRms(Math.sqrt(sum / (end - i))));
+    }
+    return env;
+  }).catch(() => null);
+}
+
+let liveAnalyser = null;   // set during a live call: Buddy's incoming voice
+let demoMode = false;      // ?demo=robot drives the robot itself
+function levelLoop() {
+  if (player && playerBusy() && player.env) {
+    body.emit("level", player.env[Math.floor(player.currentTime / 0.02)] || 0);
+  } else if (liveAnalyser) {
+    const data = new Float32Array(liveAnalyser.fftSize);
+    liveAnalyser.getFloatTimeDomainData(data);
+    let sum = 0; for (const v of data) sum += v * v;
+    body.emit("level", levelFromRms(Math.sqrt(sum / data.length)));
+  } else if (!recorder && !demoMode) {
+    body.emit("level", 0);
+  }
+  requestAnimationFrame(levelLoop);
+}
+requestAnimationFrame(levelLoop);
+
+// --- Streaming ------------------------------------------------------------------------------------
+// The server answers with server-sent events over a POST response: read them as they arrive.
+async function streamPost(url, options, onEvent) {
+  const response = await fetch(url, options);
+  if (!response.ok) throw new Error(response.status + " " + (await response.text()).slice(0, 200));
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let end;
+    while ((end = buffer.indexOf("\n\n")) >= 0) {
+      const chunk = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      for (const line of chunk.split("\n")) if (line.startsWith("data:")) onEvent(JSON.parse(line.slice(5)));
+    }
+  }
+}
+
+// A Buddy bubble that fills in while the reply streams: each piece is shown the moment it arrives.
+function streamingRow() {
+  const row = addRow("assistant", "", { expression: "idle" });
+  row.classList.add("thinking");
+  const bubble = row.querySelector(".bubble");
+  bubble.textContent = "…";
+  let text = "";
+  return {
+    row,
+    add(delta) {
+      if (!text) row.classList.remove("thinking");
+      text += delta;
+      bubble.textContent = text;
+      $("log").scrollTop = $("log").scrollHeight;
+    },
+    face(expression) { row.querySelector(".face").textContent = FACES[expression] || FACES.idle; },
+    finish(reply, meta) {
+      row.classList.remove("thinking");
+      // The checked final text: the same words, unless a filter dropped a sentence; line breaks kept.
+      if (reply && reply.text) bubble.textContent = reply.text;
+      if (reply) this.face(reply.expression);
+      if (reply) placeButtons(row, reply.text);   // "Where should I save …?": one button per place
+      if (meta) {
+        row.lastChild.append(meta);
+        const speak = el("button", "speak", "🔊"); speak.type = "button"; speak.title = "Say it aloud";
+        speak.onclick = () => sayAloud(bubble.textContent); meta.append(speak);
+      }
+    },
+  };
+}
+
+const TEXT_PLACEHOLDER = $("text").placeholder;
+$("form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (recorder) await stopRecording();   // Send while still recording: stop, then send what was said
+  const text = $("text").value.trim();
+  if (!text) return;
+  $("text").value = ""; $("text").classList.remove("hearing"); $("text").placeholder = TEXT_PLACEHOLDER;
+  if (pendingVoice) {
+    // A push-to-talk recording: send the audio (for voice cues) with the words as you confirmed them.
+    const voice = pendingVoice; pendingVoice = null;
+    body.emit("state", "thinking");
+    await sendVoice(voice.wav, { mode: voice.mode, interrupted: voice.interrupted, gapMs: voice.gapMs, text });
+    return;
+  }
+  $("sendBtn").disabled = true;
+  const userRow = addRow("user", text);
+  const out = streamingRow();
+  body.emit("state", "thinking");
+  try {
+    await streamPost("/v1/chat/stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: userId(), text, thread: currentThread }) }, (event) => {
+      if (event.type === "request") attachObject(userRow, "sent to backend", event.object);
+      else if (event.type === "response") attachObject(out.row, "backend response", event.object);
+      else if (event.type === "delta") out.add(event.text);
+      else if (event.type === "expression") { out.face(event.expression); body.emit("expression", event.expression); }
+      else if (event.type === "done") { out.finish(event.reply, metaFor(event.reply)); body.emit("state", "idle"); }
+    });
+  } catch (error) {
+    out.row.remove();
+    addRow("assistant", "Error: " + error.message, { expression: "concerned" });
+    bodyError();
+  } finally {
+    $("sendBtn").disabled = false;
+    $("text").focus();
+    renderPanel();
+    loadThreads();
+    // Memory is saved in the background after the reply, so look again a little later.
+    setTimeout(renderPanel, 4000);
+    setTimeout(renderPanel, 12000);
+  }
+});
+
+function itemBox(title, sub, onDelete) {
+  const box = el("div", "item");
+  const head = el("div", "k");
+  head.append(el("span", "", sub));
+  if (onDelete) {
+    const x = el("button", "x", "✕");
+    x.title = "Forget this"; x.onclick = onDelete;
+    head.append(x);
+  }
+  box.append(head, el("div", "", title));
+  return box;
+}
+
+// Manual override: empty a whole store after an "are you sure?" box (Buddy asks the same in chat).
+function clearButton(label, body) {
+  const button = el("button", "clear", "🗑 " + label);
+  button.onclick = async () => {
+    if (!confirm(`${label}? This cannot be undone.`)) return;
+    await api(`/v1/users/${encodeURIComponent(userId())}/clear`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, thread: currentThread }) });
+    renderPanel(); if (traceOpen) renderMemory();
+  };
+  return button;
+}
+
+// ✏️ Edit and 🗑 Delete on one row of a side panel. `fields` describes the edit form:
+// [{ name, label, value, type: "text" | "textarea" | "date" | "datetime-local" | "select" | "checkbox", options }]
+const itemUrl = (kind, id) => `/v1/users/${encodeURIComponent(userId())}/items/${kind}/${id}?thread=${currentThread}`;
+
+function editableBox(kind, id, title, sub, fields) {
+  const box = itemBox(title, sub);
+  const actions = el("span", "acts");
+  const edit = el("button", "x edit", "✏️"); edit.type = "button"; edit.title = "Edit";
+  const remove = el("button", "x", "🗑"); remove.type = "button"; remove.title = "Delete";
+  actions.append(edit, remove);
+  box.querySelector(".k").append(actions);
+  remove.onclick = async () => {
+    if (!confirm(`Delete “${short(title, 60)}”?`)) return;
+    try { await api(itemUrl(kind, id), { method: "DELETE" }); } catch (error) { alert("Could not delete: " + error.message); }
+    renderPanel();
+  };
+  edit.onclick = () => openEditor(box, kind, id, fields);
+  return box;
+}
+
+function openEditor(box, kind, id, fields) {
+  box.textContent = "";
+  box.classList.add("editing");
+  const form = el("form", "edit-form");
+  const inputs = {};
+  for (const f of fields) {
+    const label = el("label", f.type === "checkbox" ? "check" : "", f.label);
+    let input;
+    if (f.type === "textarea") { input = el("textarea"); input.rows = 3; }
+    else if (f.type === "select") {
+      input = el("select");
+      for (const option of f.options) { const o = el("option", "", option); o.value = option; input.append(o); }
+    } else { input = el("input"); input.type = f.type || "text"; }
+    if (f.type === "checkbox") input.checked = Boolean(f.value);
+    else input.value = f.value ?? "";
+    inputs[f.name] = input;
+    if (f.type === "checkbox") label.prepend(input); else label.append(input);
+    form.append(label);
+  }
+  const error = el("div", "edit-error");
+  const buttons = el("div", "buttons");
+  const save = el("button", "primary", "Save");
+  const cancel = el("button", "", "Cancel"); cancel.type = "button";
+  buttons.append(save, cancel);
+  form.append(error, buttons);
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const body = {};
+    for (const f of fields) {
+      const input = inputs[f.name];
+      if (f.type === "checkbox") body[f.name] = input.checked;
+      else if (input.value.trim() !== "") body[f.name] = input.value.trim();
+    }
+    save.disabled = true;
+    try { await api(itemUrl(kind, id), { method: "PATCH", body: JSON.stringify(body) }); renderPanel(); }
+    catch (err) { error.textContent = "Could not save: " + err.message.replace(/^\d+ /, ""); save.disabled = false; }
+  };
+  cancel.onclick = () => renderPanel();
+  box.append(form);
+  inputs[fields[0].name].focus();
+}
+
+// A reminder's time as the value of a datetime-local input (the browser's clock is the user's).
+function localInput(iso) {
+  const d = new Date(iso), pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function memoryItems(panel, user, items, empty) {
+  if (!items.length) panel.append(el("div", "empty", empty));
+  for (const m of items) {
+    const until = m.expires_at ? ` · until ${new Date(m.expires_at).toLocaleDateString()}` : "";
+    const where = [m.category, m.subject, m.topic].filter(Boolean).join(" · ");
+    const fields = [{ name: "text", label: "Text", value: m.text, type: "textarea" }];
+    if (m.scope === "long") fields.push({ name: "subject", label: "Who / what", value: m.subject }, { name: "topic", label: "Topic", value: m.topic });
+    panel.append(editableBox("memory", m.id, m.text, `${m.pinned ? "📌 " : ""}${where}${m.date ? " · " + m.date : ""}${until}`, fields));
+  }
+}
+
+// "What to say" for each tab: the words Buddy listens for, and example sentences (click one to put it in the box).
+const SAY = {
+  memory: {
+    keywords: ["remember long term", "save it in memory", "forget", "what do you know about me"],
+    tip: "Lasting facts: name, city, people, birthdays, likes, projects. Say where to save it, or Buddy saves only when it is sure (otherwise it asks where).",
+    examples: [
+      "remember long term: my name is Rohan and I live in Pune",
+      "remember long term: my mom's birthday is on 14 November",
+      "remember long term that I'm allergic to peanuts",
+      "when is my mom's birthday?",
+      "what do you know about me?",
+      "forget that I live in Pune",
+    ],
+  },
+  short: {
+    keywords: ["short term", "keep this for a few days", "forget"],
+    tip: "Things for the next 10 days: payments, plans, how this week is going. They expire on their own.",
+    examples: [
+      "short term: I lent Karan 500 rupees today",
+      "short term: I'm on a diet this week",
+      "short term: my exam is on Friday",
+      "how much did I lend Karan?",
+      "what's in my short-term memory?",
+      "forget the Karan payment",
+    ],
+  },
+  notes: {
+    keywords: ["note down", "note:", "write this down", "what was my …"],
+    tip: "Notes keep exact text: passwords, codes, addresses, ideas. You can ask later in other words (\"internet code\" finds the wifi note).",
+    examples: [
+      "note down the wifi password: abc123",
+      "note: Amit's address is 21 MG Road, Delhi",
+      "note an idea: start sketching on weekends",
+      "what's the internet code?",
+      "what was Amit's address?",
+      "delete the sketching note",
+    ],
+  },
+  reminders: {
+    keywords: ["remind me", "set a reminder", "full day", "every day / every Monday / every month", "move", "cancel", "done"],
+    tip: "Say the day and the time; Buddy asks for whichever is missing. Say \"full day\" for a reminder for the whole day (said at 9:00 that morning). Due reminders are spoken, with Done and 10-minute snooze buttons.",
+    examples: [
+      "remind me tonight at 8 to call mom",
+      "remind me every day at 8 am to take vitamins",
+      "remind me in 10 minutes to check the oven",
+      "set a full day reminder on Monday: Riya's exam",
+      "set a reminder to call the bank",
+      "what reminders do I have?",
+      "move the call-mom reminder to 9 pm",
+      "cancel the gym reminder",
+    ],
+  },
+  todos: {
+    keywords: ["add to my to-do", "for tomorrow / for Friday", "done with …", "what do I have to do"],
+    tip: "To-dos belong to a day (today if you don't say). Unfinished ones from earlier days show up as overdue.",
+    examples: [
+      "add to my to-do: pay the electricity bill, high priority",
+      "add a to-do for tomorrow: book the car service",
+      "what do I have to do today?",
+      "what's planned for Friday?",
+      "done with the electricity bill",
+      "move the car service to Saturday",
+    ],
+  },
+  lists: {
+    keywords: ["add … to my … list", "bought / watched / packed", "what's on my … list", "clear my … list"],
+    tip: "Any list by name: shopping, watchlist, packing, books. Clearing a list always asks yes/no first.",
+    examples: [
+      "add milk, eggs and bread to my shopping list",
+      "add Dune to my watchlist",
+      "what's left on my shopping list?",
+      "I bought the milk and eggs",
+      "remove bread from the shopping list",
+      "clear my shopping list",
+    ],
+  },
+  chat: {
+    keywords: ["anything", "Hinglish or English", "search the web for …", "calculate …"],
+    tip: "Just talk: Buddy chats about anything, searches the web for live facts and does maths. The last 20 messages go to the LLM; older ones become a summary.",
+    examples: [
+      "I'm tired, too many meetings today",
+      "give me a quick dinner idea without peanuts",
+      "what's the weather in Pune today?",
+      "how many steps a day are healthy?",
+      "what is 18% of 1200?",
+      "kal ka plan kya hai?",
+    ],
+  },
+};
+
+function sayBox(name) {
+  const help = SAY[name];
+  if (!help) return el("div");
+  const box = el("details", "say");
+  box.open = store("companion.sayOpen." + name) !== "no";
+  box.addEventListener("toggle", () => store("companion.sayOpen." + name, box.open ? "yes" : "no"));
+  box.append(el("summary", "", "💬 What to say"));
+  const body = el("div", "body");
+  const kw = el("div", "kw");
+  kw.append("Words Buddy listens for: ");
+  help.keywords.forEach((word, index) => { if (index) kw.append(", "); kw.append(el("b", "", word)); });
+  body.append(kw, el("div", "kw", help.tip));
+  for (const example of help.examples) {
+    const button = el("button", "ex", "“" + example + "”");
+    button.type = "button";
+    button.title = "Put this in the message box";
+    button.onclick = () => { $("text").value = example; $("text").focus(); };
+    body.append(button);
+  }
+  box.append(body);
+  return box;
+}
+
+async function renderPanel() {
+  const panel = $("panel");
+  const user = encodeURIComponent(userId());
+  try {
+    if (tab === "memory") {
+      const { long_term, pending } = await api(`/v1/users/${user}/memory?thread=${currentThread}`);
+      panel.textContent = ""; panel.append(sayBox(tab));
+      panel.append(el("h3", "", `Long-term memory (${long_term.length})`));
+      memoryItems(panel, user, long_term, "Nothing yet. Try: “remember long term: my sister Riya's birthday is 3 May”.");
+      if (long_term.length) panel.append(clearButton("Clear long-term memory", { store: "long" }));
+      if (pending.length) {
+        panel.append(el("h3", "", "Unsure (Buddy will ask once)"));
+        for (const m of pending) panel.append(itemBox(m.text, `${m.category} · confidence ${m.confidence}`));
+      }
+    } else if (tab === "short") {
+      const { short_term } = await api(`/v1/users/${user}/memory?thread=${currentThread}`);
+      panel.textContent = ""; panel.append(sayBox(tab));
+      panel.append(el("h3", "", `Short-term memory, 10 days (${short_term.length})`));
+      memoryItems(panel, user, short_term, "Nothing. Try: “short term: I have an exam on Friday”.");
+      if (short_term.length) panel.append(clearButton("Clear short-term memory", { store: "short" }));
+    } else if (tab === "reminders") {
+      const { reminders } = await api(`/v1/users/${user}/reminders?thread=${currentThread}`);
+      panel.textContent = ""; panel.append(sayBox(tab));
+      if (!reminders.length) panel.append(el("div", "empty", "No reminders. Try: “remind me tomorrow at 9 to take medicine”."));
+      for (const r of reminders) {
+        const flags = (r.repeat !== "none" ? " · " + r.repeat : "") + (r.status !== "pending" ? " · " + r.status : "");
+        const when = r.all_day
+          ? "📅 " + new Date(r.due_at).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }) + " · all day"
+          : new Date(r.due_at).toLocaleString();
+        panel.append(editableBox("reminder", r.id, r.text, when + flags, [
+          { name: "text", label: "What", value: r.text },
+          { name: "when", label: r.all_day ? "Day (said at 9:00 that morning)" : "When", value: localInput(r.due_at), type: "datetime-local" },
+          { name: "repeat", label: "Repeat", value: r.repeat, type: "select", options: ["none", "daily", "weekly", "monthly"] },
+          { name: "all_day", label: "Full day (no time)", value: r.all_day, type: "checkbox" }]));
+      }
+      if (reminders.length) panel.append(clearButton("Clear all reminders", { store: "reminders" }));
+    } else if (tab === "notes") {
+      const { notes } = await api(`/v1/users/${user}/notes?thread=${currentThread}`);
+      panel.textContent = ""; panel.append(sayBox(tab));
+      panel.append(el("h3", "", `Notes (${notes.length})`));
+      if (!notes.length) panel.append(el("div", "empty", "No notes. Try: “note down the wifi password: abc123”."));
+      for (const n of notes) {
+        const box = editableBox("note", n.id, n.text, `${n.title || "Note"} · ${new Date(n.created_at).toLocaleDateString()}`, [
+          { name: "title", label: "Title", value: n.title }, { name: "text", label: "Text", value: n.text, type: "textarea" }]);
+        if (n.keywords && n.keywords.length) box.append(el("div", "sub", "search words: " + n.keywords.join(", ")));
+        panel.append(box);
+      }
+      if (notes.length) panel.append(clearButton("Delete all notes", { store: "notes" }));
+    } else if (tab === "todos") {
+      const { todos } = await api(`/v1/users/${user}/lists?thread=${currentThread}`);
+      panel.textContent = ""; panel.append(sayBox(tab));
+      const open = todos.filter((t) => !t.done).length;
+      panel.append(el("h3", "", `To-dos (${open} open, ${todos.length - open} done)`));
+      if (!todos.length) panel.append(el("div", "empty", "No to-dos. Try: “add to my to-do: call the bank”."));
+      const byDay = {};
+      for (const t of todos) (byDay[t.day] ||= []).push(t);
+      for (const [day, items] of Object.entries(byDay)) {
+        panel.append(el("div", "sub", new Date(day + "T00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })));
+        for (const t of items) panel.append(editableBox("todo", t.id, (t.done ? "✅ " : "⬜ ") + t.text, t.priority !== "normal" ? t.priority + " priority" : "", [
+          { name: "text", label: "Task", value: t.text }, { name: "day", label: "Day", value: t.day, type: "date" },
+          { name: "priority", label: "Priority", value: t.priority, type: "select", options: ["low", "normal", "high"] },
+          { name: "done", label: "Done", value: t.done, type: "checkbox" }]));
+      }
+      if (todos.length) panel.append(clearButton("Clear all to-dos", { store: "todos" }));
+    } else if (tab === "lists") {
+      const { lists } = await api(`/v1/users/${user}/lists?thread=${currentThread}`);
+      panel.textContent = ""; panel.append(sayBox(tab));
+      const names = Object.keys(lists);
+      if (!names.length) panel.append(el("div", "empty", "No lists. Try: “add milk and eggs to my shopping list”."));
+      for (const [name, items] of Object.entries(lists)) {
+        panel.append(el("h3", "", `${name} (${items.filter((i) => !i.done).length} left)`));
+        for (const i of items) panel.append(editableBox("list_item", i.id, (i.done ? "✅ " : "⬜ ") + i.text, "", [
+          { name: "text", label: "Item", value: i.text }, { name: "done", label: "Ticked", value: i.done, type: "checkbox" }]));
+        panel.append(clearButton(`Empty the ${name} list`, { store: "list", list: name }));
+      }
+    } else {
+      // Chat: the conversation memory the LLM gets (recent messages word for word + a running summary).
+      const state = await api(`/v1/users/${user}/memory/state?thread=${currentThread}`);
+      const st = state.short_term, r = state.rules;
+      panel.textContent = ""; panel.append(sayBox(tab));
+      panel.append(el("div", "note", `The last ${r.window} messages go to the LLM word for word. Older ones are folded into the running summary (after ${r.summarize_after} unsummarized messages).`));
+      if (!st.conversation) { panel.append(el("div", "empty", "No conversation yet.")); return; }
+      panel.append(el("div", "sub", `${st.total} messages · ${st.conversation.summarized_count} folded into the summary`));
+      panel.append(el("h3", "", "Running summary"));
+      panel.append(st.conversation.summary ? el("div", "item", st.conversation.summary) : el("div", "empty", "No summary yet (the chat is still short)."));
+      panel.append(el("h3", "", "Messages"));
+      for (const m of st.messages.slice().reverse()) {
+        const where = { window: "sent to LLM", summary: "in summary", stored: "stored only" }[m.where] || m.where;
+        panel.append(itemBox(m.content, `${m.role === "user" ? "you" : "Buddy"} · ${where}`));
+      }
+    }
+  } catch (error) { panel.textContent = "Could not load: " + error.message; }
+}
+
+document.querySelectorAll(".tabs button").forEach((button) => button.addEventListener("click", () => {
+  tab = button.dataset.tab;
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b === button)));
+  renderPanel();
+}));
+
+$("user").addEventListener("change", (event) => {
+  if (event.target.value === "__new__") {
+    const name = (prompt("New user id (letters, numbers, - or _):") || "").trim();
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(name)) { loadUsers(); return; }
+    selectUser(name);
+    return;
+  }
+  selectUser(event.target.value);
+});
+// Threads: main is thread 1. Each thread has its own chat AND its own memory, notes, reminders,
+// to-dos and lists (a new thread starts empty).
+async function loadThreads() {
+  try {
+    const { threads } = await api(`/v1/users/${encodeURIComponent(userId())}/threads`);
+    const select = $("threadSelect");
+    select.textContent = "";
+    if (!threads.some((t) => t.thread === currentThread)) threads.push({ thread: currentThread, number: threads.length + 1, messages: 0 });
+    for (const t of threads) {
+      const option = el("option", "", `Thread ${t.number}${t.thread === "main" ? " · main" : ""} · ${t.messages} msgs`);
+      option.value = t.thread;
+      option.title = t.first_message ? `Starts with: “${t.first_message}”` : "Empty";
+      select.append(option);
+    }
+    select.value = currentThread;
+  } catch { /* the server may be restarting */ }
+}
+function openThread(thread) {
+  currentThread = thread;
+  loadThreads();
+  loadHistory();
+  renderPanel();
+  if (traceOpen) renderMemory();
+}
+$("threadSelect").addEventListener("change", (event) => openThread(event.target.value));
+$("newConv").addEventListener("click", async () => {
+  // A separate chat with its own memory; the main thread stays exactly as it is.
+  const { thread } = await api(`/v1/users/${encodeURIComponent(userId())}/threads`, { method: "POST" });
+  openThread(thread);
+});
+
+function toast(text) {
+  const note = el("div", "toast", "⏰ " + text);
+  document.body.append(note);
+  setTimeout(() => note.remove(), 9000);
+}
+// A due reminder is said out loud (the robot speaks it) and gets two answers. Nobody answers:
+// the server brings it back once more after 10 minutes.
+function reminderCard(r) {
+  const user = encodeURIComponent(userId());
+  const card = el("div", "reminder-card");
+  card.append(el("div", "", `⏰ ${r.again ? "Reminder again" : "Reminder"}: ${r.text}`), el("div", "sub", r.due));
+  const answer = async (path, said) => {
+    card.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    const sep = path.includes("?") ? "&" : "?";
+    try { await api(`/v1/users/${user}/reminders/${r.id}/${path}${sep}thread=${r.thread || "main"}`, { method: "POST" }); card.append(el("div", "sub", said)); }
+    catch (error) { card.append(el("div", "sub", "Could not save: " + error.message)); }
+    if (tab === "reminders") renderPanel();
+  };
+  const row = el("div", "buttons");
+  const done = el("button", "", "✅ Ho gaya"); done.onclick = () => answer("done", "Marked done.");
+  const later = el("button", "", "⏰ 10 min baad"); later.onclick = () => answer("snooze?minutes=10", "Okay, again in 10 minutes.");
+  row.append(done, later);
+  card.append(row);
+  return card;
+}
+async function checkDue() {
+  try {
+    const { due } = await api(`/v1/users/${encodeURIComponent(userId())}/reminders/due`);
+    for (const r of due) {
+      toast(`${r.text} (${r.due})`);
+      const row = addRow("assistant", "", { expression: "happy" });
+      row.querySelector(".bubble").replaceChildren(reminderCard(r));
+      body.emit("expression", "happy");
+      sayAloud(r.speak).catch(() => {});
+    }
+    if (due.length && tab === "reminders") renderPanel();
+  } catch { /* the server may be restarting */ }
+}
+
+// --- Voice -----------------------------------------------------------------------------------
+// The mic is recorded as raw samples and sent as a 16-bit WAV clip; the server resamples it.
+let player = null;            // the <audio> currently playing Buddy's voice
+let recorder = null;          // { stream, context, source, node, chunks, rate }
+const speed = () => Number($("speed").value);
+$("speed").addEventListener("input", () => { $("speedValue").textContent = speed().toFixed(2) + "×"; });
+
+// For voice cues: when Buddy's voice last ended (pause before answering) and whether it is talking now.
+let buddyEndedAt = null;
+const playerBusy = () => Boolean(player && !player.paused && !player.ended);
+// Buddy counts as talking while a sentence plays, more are queued, or the reply is still streaming.
+const buddyTalking = () => playerBusy() || audioQueue.length > 0 || voiceAbort !== null;
+
+// Buddy's voice arrives one sentence at a time: play them in order.
+const audioQueue = [];
+let voiceAbort = null;   // stops a push-to-talk reply that is still streaming (barge-in)
+
+function stopSpeaking() {
+  audioQueue.length = 0;
+  if (voiceAbort) { voiceAbort.abort(); voiceAbort = null; }
+  if (player) { if (playerBusy()) buddyEndedAt = performance.now(); player.pause(); player = null; }
+}
+
+function playNext() {
+  const blob = audioQueue.shift();
+  if (!blob) {
+    player = null;
+    if (!voiceAbort && !recorder) body.emit("state", "idle");   // Buddy finished talking
+    return;
+  }
+  const audio = new Audio(URL.createObjectURL(blob));
+  player = audio;
+  voiceEnvelope(blob).then((env) => { audio.env = env; });
+  audio.onplay = () => body.emit("state", "speaking");
+  audio.onended = () => { buddyEndedAt = performance.now(); playNext(); };
+  audio.play().catch(() => playNext());
+}
+
+function enqueueAudio(blob) {
+  audioQueue.push(blob);
+  if (!playerBusy()) playNext();
+}
+
+function play(blob) {
+  stopSpeaking();
+  enqueueAudio(blob);
+}
+
+const b64ToWav = (b64) => new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: "audio/wav" });
+
+async function sayAloud(text) {
+  const response = await fetch("/v1/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, speed: speed() }) });
+  if (response.ok) play(await response.blob());
+}
+
+function encodeWav(chunks, rate) {
+  const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const view = new DataView(new ArrayBuffer(44 + length * 2));
+  const text = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)); };
+  text(0, "RIFF"); view.setUint32(4, 36 + length * 2, true); text(8, "WAVE"); text(12, "fmt ");
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  text(36, "data"); view.setUint32(40, length * 2, true);
+  let offset = 44;
+  for (const chunk of chunks) for (let i = 0; i < chunk.length; i++, offset += 2) {
+    view.setInt16(offset, Math.max(-1, Math.min(1, chunk[i])) * 0x7fff, true);
+  }
+  return new Blob([view], { type: "audio/wav" });
+}
+
+const MIC_BUTTONS = { push_to_talk: ["micBtn", "🎤"], push_to_talk_cues: ["cueMicBtn", "🎙️✨"] };
+
+async function startRecording(mode = "push_to_talk") {
+  const interrupted = buddyTalking();
+  stopSpeaking();  // barge-in: talking over Buddy stops its voice
+  const startedAt = performance.now();
+  const gapMs = !interrupted && buddyEndedAt !== null ? Math.round(startedAt - buddyEndedAt) : null;
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  const context = new AudioContext();
+  const source = context.createMediaStreamSource(stream);
+  const node = context.createScriptProcessor(4096, 1, 1);
+  const chunks = [];
+  node.onaudioprocess = (event) => {
+    const samples = new Float32Array(event.inputBuffer.getChannelData(0));
+    chunks.push(samples);
+    let sum = 0; for (const v of samples) sum += v * v;
+    body.emit("level", levelFromRms(Math.sqrt(sum / samples.length)));   // the robot listens to your voice
+  };
+  body.emit("state", "listening");
+  source.connect(node); node.connect(context.destination);
+  pendingVoice = null;
+  $("text").value = ""; $("text").classList.add("hearing"); $("text").placeholder = "Listening… your words appear here";
+  recorder = { stream, context, source, node, chunks, rate: context.sampleRate, timer: setTimeout(stopRecording, 60000), mode, interrupted, gapMs };
+  // Your words so far, every 1.5 s, into the input bar (speech to text only: nothing is sent or saved).
+  recorder.preview = setInterval(() => previewWords(chunks, context.sampleRate), 1500);
+  $(MIC_BUTTONS[mode][0]).classList.add("recording"); $(MIC_BUTTONS[mode][0]).textContent = "■";
+}
+
+// Push-to-talk: the recording waits here after ■ until you press Send (you may fix the words first).
+let pendingVoice = null;
+let previewSeq = 0;
+async function previewWords(chunks, rate, final = false) {
+  if (!chunks.length) return;
+  const seq = ++previewSeq;
+  try {
+    const response = await fetch("/v1/stt", { method: "POST", headers: { "Content-Type": "audio/wav" }, body: encodeWav(chunks.slice(), rate) });
+    if (!response.ok) return;
+    const heard = await response.json();
+    if (seq !== previewSeq || (!recorder && !final && !pendingVoice)) return;   // a newer result, or already sent
+    if (heard.text) $("text").value = heard.text;
+  } catch { /* the next try will catch up */ }
+}
+
+async function stopRecording() {
+  if (!recorder) return;
+  const { stream, context, source, node, chunks, rate, timer, mode, interrupted, gapMs, preview } = recorder;
+  recorder = null;
+  clearTimeout(timer); clearInterval(preview);
+  source.disconnect(); node.disconnect(); stream.getTracks().forEach((track) => track.stop()); await context.close();
+  const [id, label] = MIC_BUTTONS[mode];
+  $(id).classList.remove("recording"); $(id).textContent = label;
+  body.emit("level", 0);
+  body.emit("state", "idle");
+  if (!chunks.length) { $("text").classList.remove("hearing"); $("text").placeholder = TEXT_PLACEHOLDER; return; }
+  // ■ only stops: the final words go into the bar, and Send sends them with the recording (for voice cues).
+  pendingVoice = { wav: encodeWav(chunks, rate), mode, interrupted, gapMs };
+  $("text").placeholder = "Fix the words if needed, then press Send";
+  await previewWords(chunks, rate, true);
+  $("text").focus();
+}
+
+async function sendVoice(wav, { mode = "push_to_talk", interrupted = false, gapMs = null, text = null } = {}) {
+  $("micBtn").disabled = true; $("cueMicBtn").disabled = true;
+  const listening = addRow("user", MIC_BUTTONS[mode][1] + " …");
+  const controller = new AbortController();
+  try {
+    let url = `/v1/voice/stream?user_id=${encodeURIComponent(userId())}&thread=${currentThread}&speed=${speed()}&mode=${mode}&interrupted=${interrupted}`;
+    if (gapMs !== null) url += `&gap_ms=${gapMs}`;
+    if (text) url += `&text=${encodeURIComponent(text)}`;   // the words you confirmed in the bar
+    voiceAbort = controller;
+    let out = null, turn = null, ttsProvider = "", started = performance.now(), userRow = null;
+    await streamPost(url, { method: "POST", headers: { "Content-Type": "audio/wav" }, body: wav, signal: controller.signal }, (event) => {
+      if (event.type === "heard") {
+        turn = event.turn; userRow = showHeard(turn, listening, mode);
+        if (turn.kept) out = streamingRow();
+        $("micBtn").disabled = false; $("cueMicBtn").disabled = false;  // you may talk over the reply now (barge-in)
+      }
+      else if (event.type === "error") throw new Error(event.error);
+      else if (event.type === "request") attachObject(userRow, "sent to backend", event.object);
+      else if (event.type === "response") attachObject(out ? out.row : userRow, "backend response", event.object);
+      else if (!out) return;
+      else if (event.type === "delta") out.add(event.text);
+      else if (event.type === "expression") { out.face(event.expression); body.emit("expression", event.expression); }
+      else if (event.type === "audio") { ttsProvider = event.tts_provider; enqueueAudio(b64ToWav(event.wav_b64)); }
+      else if (event.type === "done" && event.reply) {
+        const meta = metaFor(event.reply);
+        meta.append(el("span", "tag", "🔊 " + (ttsProvider || "no voice")), el("span", "", "total " + ((performance.now() - started) / 1000).toFixed(1) + " s"));
+        out.finish(event.reply, meta);
+      }
+    });
+  } catch (error) {
+    listening.remove();
+    if (error.name !== "AbortError") { addRow("assistant", "Voice error: " + error.message, { expression: "concerned" }); bodyError(); }
+  } finally {
+    if (voiceAbort === controller) voiceAbort = null;
+    if (!playerBusy() && !audioQueue.length && !recorder) body.emit("state", "idle");
+    $("micBtn").disabled = false; $("cueMicBtn").disabled = false;
+    renderPanel(); setTimeout(renderPanel, 4000); setTimeout(renderPanel, 12000);
+  }
+}
+
+// What was heard (and, with ✨, how it sounded): shown as the user's bubble.
+function showHeard(turn, listening, mode) {
+    listening.remove();
+    const heardMeta = el("div", "meta");
+    heardMeta.append(el("span", "tag", "🎤 " + turn.stt_provider), el("span", "", (turn.stt_ms / 1000).toFixed(1) + " s"));
+    if (turn.language) heardMeta.append(el("span", "", turn.language));
+    if (turn.voice_cues) {
+      const c = turn.voice_cues;
+      heardMeta.append(el("span", "tag", "✨ cues"), el("span", "", `${c.speech_s ?? "?"}s speech` + (c.wpm ? ` · ${Math.round(c.wpm)} wpm` : "")
+        + (c.pause_before_s != null ? ` · paused ${c.pause_before_s}s` : "") + (c.interrupted ? " · cut in" : "")));
+      heardMeta.append(el("span", "", "→ LLM: " + (turn.voice_note || "(nothing unusual)")));
+    }
+    if (!turn.kept) {
+      const row = addRow("user", turn.heard ? `“${turn.heard}”` : "(kuch sunai nahi diya)", { meta: heardMeta });
+      addRow("assistant", "Sorry, theek se sunai nahi diya. Phir se bologe? (" + turn.reason + ")", { expression: "concerned" });
+      return row;
+    }
+    return addRow("user", turn.heard, { meta: heardMeta });
+}
+
+function micClick(mode) {
+  if (recorder) { if (recorder.mode === mode) stopRecording(); return; }  // the other button is recording: ignore
+  startRecording(mode).catch((error) => addRow("assistant", "Mic not available: " + error.message, { expression: "concerned" }));
+}
+$("micBtn").addEventListener("click", () => micClick("push_to_talk"));
+$("cueMicBtn").addEventListener("click", () => micClick("push_to_talk_cues"));
+
+// --- Live voice (LiveKit) ------------------------------------------------------------------------
+// The server starts Buddy in a LiveKit room and returns a token; the browser joins with its mic.
+// Buddy sends small JSON messages: captions, its expression and its state.
+const STATES = { listening: "👂 listening", thinking: "💭 thinking", speaking: "🗣️ speaking", idle: "🙂 your turn" };
+let live = null;  // { room, name }
+
+function loadLiveKit() {
+  if (window.LivekitClient) return Promise.resolve(window.LivekitClient);
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/livekit-client@2.22.4/dist/livekit-client.umd.js";
+    script.onload = () => resolve(window.LivekitClient);
+    script.onerror = () => reject(new Error("could not load livekit-client"));
+    document.head.append(script);
+  });
+}
+
+let liveReply = null;   // the Buddy bubble being filled during a live reply
+let lastLiveUserRow = null, lastLiveBotRow = null;   // where a live turn's objects are attached
+function onLiveMessage(payload) {
+  let message;
+  try { message = JSON.parse(new TextDecoder().decode(payload)); } catch { return; }
+  if (message.type === "turn_objects") {   // sent after each live turn
+    attachObject(message.request.text ? lastLiveUserRow : lastLiveBotRow, "sent to backend", message.request);
+    attachObject(lastLiveBotRow, "backend response", message.response);
+    const usage = message.response && message.response.usage;
+    if (usage && usage.calls && lastLiveBotRow) {   // live replies get their token line here
+      lastLiveBotRow.lastChild.append(el("div", "meta", "")); lastLiveBotRow.lastChild.lastChild.append(tokenTag(usage));
+      countTokens(usage);
+    }
+  } else if (message.type === "caption_partial") {   // your words so far in this turn: shown in the input bar
+    $("text").value = message.text;
+    $("text").classList.add("hearing");
+  } else if (message.type === "caption_delta") {   // Buddy's words as the model writes them
+    if (!liveReply) { liveReply = streamingRow(); liveReply.face($("liveFace").dataset.expression); }
+    liveReply.add(message.text);
+  } else if (message.type === "caption" && message.text) {
+    if (message.role === "user") {
+      lastLiveUserRow = addRow("user", message.text);
+      $("text").value = ""; $("text").classList.remove("hearing");   // sent: the bar is free again
+    }
+    else if (liveReply) { liveReply.finish({ text: message.text, expression: $("liveFace").dataset.expression }, null); lastLiveBotRow = liveReply.row; liveReply = null; }
+    else lastLiveBotRow = addRow("assistant", message.text, { expression: $("liveFace").dataset.expression });
+  }
+  else if (message.type === "expression") { $("liveFace").textContent = FACES[message.expression] || FACES.idle; $("liveFace").dataset.expression = message.expression; body.emit("expression", message.expression); }
+  else if (message.type === "state") { $("liveState").textContent = STATES[message.state] || message.state; body.emit("state", message.state); }
+  else if (message.type === "safety_resources") toast("Support: " + message.resources.map((r) => `${r.name} ${r.phone}`).join(" · "));
+}
+
+// Live log: every turn-taking decision (trace events "live_turn"), newest first.
+const LIVE_ICONS = { "smart turn": "🎧", waiting: "⏳", sent: "➤", merge: "🔗", "barge-in": "✋", "barge-in ignored": "🙉",
+                     "backchannel ignored": "👂", "stopped on request": "✋", "reply dropped": "🗑" };
+let liveLogSource = null;
+function startLiveLog() {
+  const since = Date.now() / 1000;
+  $("livelogList").textContent = "";
+  $("livelog").classList.add("on"); $("livelog").open = true;
+  liveLogSource = new EventSource(`/v1/users/${encodeURIComponent(userId())}/trace`);
+  liveLogSource.onmessage = (message) => {
+    let event;
+    try { event = JSON.parse(message.data); } catch { return; }
+    if (event.kind !== "live_turn" || event.at < since) return;
+    const d = event.data;
+    const row = el("div", "lt");
+    const what = el("div");
+    what.append(el("b", "", d.decision), " ", el("span", "why", d.reason + (d.text ? ` · “${short(d.text, 80)}”` : "")));
+    row.append(el("span", "t", new Date(event.at * 1000).toLocaleTimeString([], { hour12: false })), el("span", "", LIVE_ICONS[d.decision] || "•"), what);
+    $("livelogList").prepend(row);
+    while ($("livelogList").children.length > 60) $("livelogList").lastChild.remove();
+  };
+}
+function stopLiveLog() {
+  if (liveLogSource) { liveLogSource.close(); liveLogSource = null; }
+}
+
+async function startLive() {
+  $("liveBtn").disabled = true;
+  $("livebar").classList.add("on"); $("liveState").textContent = "starting Buddy…";
+  let room = null, session = null;
+  try {
+    const LK = await loadLiveKit();
+    // Ask for the mic first, so a refusal never leaves Buddy waiting in an empty room.
+    (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop());
+    session = await api("/v1/live/start", { method: "POST", body: JSON.stringify({ user_id: userId() }) });
+    room = new LK.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    room.on(LK.RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === LK.Track.Kind.Audio) {
+        const el = track.attach(); el.dataset.live = "1"; document.body.append(el);
+        // Buddy's voice level for the robot's mouth.
+        try {
+          const ctx = new AudioContext();
+          liveAnalyser = ctx.createAnalyser(); liveAnalyser.fftSize = 512;
+          ctx.createMediaStreamSource(new MediaStream([track.mediaStreamTrack])).connect(liveAnalyser);
+          liveAnalyser.ctx = ctx;
+        } catch { liveAnalyser = null; }
+      }
+    });
+    room.on(LK.RoomEvent.DataReceived, onLiveMessage);
+    room.on(LK.RoomEvent.Disconnected, () => endLive(false));
+    await room.connect(session.url, session.token);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    live = { room, name: session.room };
+    startLiveLog();
+    $("liveBtn").classList.add("on"); $("liveBtn").textContent = "End live";
+    $("liveState").textContent = "connected: Buddy will greet you";
+  } catch (error) {
+    $("livebar").classList.remove("on");
+    if (room) room.disconnect();
+    if (session) api("/v1/live/stop", { method: "POST", body: JSON.stringify({ room: session.room }) }).catch(() => {});
+    addRow("assistant", "Live voice error: " + error.message, { expression: "concerned" });
+  } finally {
+    $("liveBtn").disabled = false;
+  }
+}
+
+async function endLive(disconnect = true) {
+  if (!live) return;
+  const { room, name } = live;
+  live = null;
+  if (disconnect) await room.disconnect();
+  $("text").classList.remove("hearing");
+  document.querySelectorAll("audio[data-live]").forEach((el) => el.remove());
+  if (liveAnalyser) { liveAnalyser.ctx.close().catch(() => {}); liveAnalyser = null; }
+  body.emit("state", "idle");
+  $("liveBtn").classList.remove("on"); $("liveBtn").textContent = "📞 Live";
+  $("livebar").classList.remove("on");
+  stopLiveLog();   // the log stays on screen until the next call
+  api("/v1/live/stop", { method: "POST", body: JSON.stringify({ room: name }) }).catch(() => {});
+  renderPanel();
+}
+
+$("liveBtn").addEventListener("click", () => (live ? endLive() : startLive()));
+
+// --- Trace panel ---------------------------------------------------------------------------------
+// A live stream (server-sent events) of every step the brain takes, plus short-term and long-term
+// memory side by side. Memory is re-read after each step that can change it.
+let traceSource = null;
+let traceOpen = false;
+let lastContext = null;           // the latest "context" event: what went into the prompt
+let lastDecisions = new Set();    // memory keys changed by the latest extraction
+
+function short(text, n = 160) { text = String(text ?? ""); return text.length > n ? text.slice(0, n) + "…" : text; }
+function badge(text, cls = "") { return el("span", "badge " + cls, text); }
+function pre(text) { return el("pre", "", typeof text === "string" ? text : JSON.stringify(text, null, 2)); }
+
+const MEMORY_EVENTS = new Set(["context", "tool_result", "turn_end", "memory_extract", "summary", "response"]);
+
+// The trace stream only keeps the memory panels fresh (the raw objects are on each chat's { } button).
+function renderEvent(event) {
+  const d = event.data || {};
+  if (event.kind === "context") lastContext = d;
+  if (event.kind === "memory_extract") lastDecisions = new Set(d.items.filter((i) => i.decision !== "ignore").map((i) => i.key));
+  if (MEMORY_EVENTS.has(event.kind)) refreshMemory();
+}
+
+function connectTrace() {
+  if (traceSource) traceSource.close();
+  traceSource = new EventSource(`/v1/users/${encodeURIComponent(userId())}/trace`);
+  traceSource.onopen = () => { $("traceDot").classList.add("on"); $("traceStatus").textContent = `live · user “${userId()}”`; };
+  traceSource.onerror = () => { $("traceDot").classList.remove("on"); $("traceStatus").textContent = "reconnecting…"; };
+  traceSource.onmessage = (message) => { try { renderEvent(JSON.parse(message.data)); } catch { /* skip a bad event */ } };
+}
+
+let memoryTimer = null;
+function refreshMemory() {  // many events arrive together: refresh at most every 300 ms
+  if (!traceOpen) return;
+  clearTimeout(memoryTimer);
+  memoryTimer = setTimeout(renderMemory, 300);
+}
+
+function memoryBox(item, extra = []) {
+  const box = el("div", "mem" + (lastDecisions.has(item.key) ? " changed" : ""));
+  const k = el("div", "k");
+  k.append(badge(item.category), item.pinned ? badge("pinned", "prompt") : "", item.subject || item.key);
+  if (item.expires_at) k.append(`until ${new Date(item.expires_at).toLocaleDateString()}`);
+  if (lastContext && lastContext.long_term.some((m) => m.key === item.key)) k.append(badge("in last prompt", "prompt"));
+  for (const x of extra) k.append(x);
+  box.append(k, el("div", "", item.text));
+  return box;
+}
+
+async function renderMemory() {
+  try {
+    const state = await api(`/v1/users/${encodeURIComponent(userId())}/memory/state?thread=${currentThread}`);
+    const { short_term: st, long_term: lt, rules: r } = state;
+    // Short-term
+    const stm = $("stm"); stm.textContent = "";
+    stm.append(el("div", "note",
+      `How it works: the last ${r.window} messages go to the LLM word for word (green). When more than ${r.summarize_after} messages are not yet summarized, the older ones are folded into a running summary (orange) in the background. Nothing is deleted; folded messages just stop being sent. A thread never resets: your main thread is one ongoing chat, and “New conversation” opens a separate thread. Short-term memory (said with “short term”, or clearly temporary) expires after 10 days.`));
+    if (!st.conversation) stm.append(el("div", "empty", "No conversation yet."));
+    else {
+      stm.append(el("h3", "", `This thread (${st.conversation.thread})`));
+      stm.append(el("div", "sub", `${st.total} messages · ${st.conversation.summarized_count} folded into the summary · started ${new Date(st.conversation.started_at).toLocaleString()}`));
+      stm.append(el("h3", "", "Running summary"));
+      stm.append(st.conversation.summary ? pre(st.conversation.summary) : el("div", "empty", "No summary yet (the chat is still short)."));
+      stm.append(el("h3", "", "Short-term memory (10 days)"));
+      if (!st.working_memory.length) stm.append(el("div", "empty", "Nothing coming up."));
+      for (const item of st.working_memory) stm.append(memoryBox(item));
+      stm.append(el("h3", "", "Message window"));
+      const legend = el("div", "sub"); legend.append(badge("in window", "window"), " sent to the LLM  ", badge("in summary", "summary"), " folded  ", badge("stored", "stored"), " only in the database");
+      stm.append(legend);
+      for (const m of st.messages.slice().reverse()) {
+        const row = el("div", "msg " + m.where);
+        row.append(badge(m.role === "user" ? "you" : "Buddy"), " ", short(m.content, 200));
+        stm.append(row);
+      }
+    }
+    // Long-term
+    const ltm = $("ltm"); ltm.textContent = "";
+    ltm.append(el("div", "note",
+      `How it works: Buddy saves only when you ask (“remember long term …”, “short term …”); the automatic extractor is ${r.auto_memory ? "on" : "off"}. The same category, subject and topic update the old item instead of adding a new one. Only pinned profile facts (at most ${r.memory_in_prompt}) go with every message; everything else is fetched with the find_saved tool when you ask. Store: ${r.memory_backend}.`));
+    ltm.append(el("h3", "", `Saved (${lt.memories.length})`));
+    if (!lt.memories.length) ltm.append(el("div", "empty", "Nothing yet."));
+    const byKind = {};
+    for (const item of lt.memories) (byKind[item.category] ||= []).push(item);
+    for (const [kind, items] of Object.entries(byKind)) {
+      ltm.append(el("div", "sub", kind));
+      for (const item of items) ltm.append(memoryBox(item));
+    }
+    ltm.append(el("h3", "", `Unsure: ask the user (${lt.pending.length})`));
+    if (!lt.pending.length) ltm.append(el("div", "empty", "None."));
+    for (const item of lt.pending) ltm.append(memoryBox(item, [badge(item.asked ? "asked" : "will ask", "ask")]));
+    // Raw database objects
+    const raw = await api(`/v1/users/${encodeURIComponent(userId())}/memory/raw?thread=${currentThread}`);
+    const db = $("db"); db.textContent = "";
+    for (const [table, rows] of Object.entries(raw.rows)) {
+      const name = table.split(" ")[0];
+      const box = el("details"); box.open = name === "memories";
+      box.append(el("summary", "", `${table} · ${rows.length} rows`));
+      box.append(el("div", "obj-label", "schema"), el("div", "obj", JSON.stringify(raw.schema[name] || [], null, 2)));
+      box.append(el("div", "obj-label", "rows"), el("div", "obj", JSON.stringify(rows, null, 2)));
+      db.append(box);
+    }
+  } catch (error) {
+    $("stm").textContent = "Could not load memory: " + error.message;
+  }
+}
+
+function openTrace() {
+  traceOpen = true;
+  $("tracePanel").classList.add("on"); $("traceBtn").classList.add("on");
+  connectTrace(); renderMemory();
+}
+function closeTrace() {
+  traceOpen = false;
+  $("tracePanel").classList.remove("on"); $("traceBtn").classList.remove("on");
+  if (traceSource) { traceSource.close(); traceSource = null; }
+}
+$("traceBtn").addEventListener("click", () => (traceOpen ? closeTrace() : openTrace()));
+$("traceClose").addEventListener("click", closeTrace);
+document.addEventListener("keydown", (event) => { if (event.key === "Escape" && traceOpen) closeTrace(); });
+
+// Front-end plugins the server switched on (COMPANION_UI_PLUGINS): each gets its own box on the stage and the body bus.
+async function loadPlugins(names) {
+  for (const name of names) {
+    try {
+      const plugin = await import(`/plugins/${name}/plugin.js`);
+      const box = document.createElement("div");
+      $("stage").append(box);
+      $("stage").classList.add("on");
+      plugin.mount(box, body);
+    } catch (error) {
+      console.error(`plugin ${name} failed`, error);
+    }
+  }
+}
+
+// Demo: open the page with ?demo=robot to see every state and mood in turn (no backend needed).
+function robotDemo() {
+  const steps = [
+    ["idle", null], ["listening", null], ["thinking", null], ["speaking", "happy"], ["idle", "happy"],
+    ["idle", "curious"], ["idle", "concerned"], ["idle", "playful"], ["idle", "surprised"], ["idle", "excited"],
+    ["idle", "sad"], ["error", null],
+  ];
+  demoMode = true;
+  let index = 0;
+  const show = () => {
+    const [state, mood] = steps[index % steps.length];
+    body.emit("state", state);
+    if (mood) body.emit("expression", mood);
+    document.title = `demo: ${state}${mood ? " + " + mood : ""}`;
+    index += 1;
+  };
+  show();
+  setInterval(show, 2600);
+  // A fake voice/mic level so listening and speaking move.
+  setInterval(() => body.emit("level", 0.35 + 0.35 * Math.sin(performance.now() / 120) * Math.sin(performance.now() / 47)), 50);
+}
+
+api("/health").then((h) => { $("health").textContent = `${h.name} · ${h.tools.length} tools` + (h.tools.includes("web_search") ? " · web search on" : " · web search off") + ` · STT ${h.stt.join("→") || "none"} · TTS ${h.tts.join("→") || "none"}` + (h.live ? " · live ready" : " · live off");
+  $("liveBtn").disabled = !h.live;
+  loadPlugins(h.plugins || []).then(() => { if (new URLSearchParams(location.search).get("demo") === "robot") robotDemo(); }); })
+  .catch(() => { $("health").textContent = "server not reachable"; });
+// The user list first: the remembered user may be gone, and the rest loads for whoever is chosen.
+loadUsers().then(() => { loadHistory(); loadThreads(); renderPanel(); });
+setInterval(checkDue, 20000);
+
+// --- Test tab --------------------------------------------------------------------------------------
+// A simulated consumer (another LLM) chats with Buddy in a new thread. This tab listens to that
+// user's trace and draws each turn: what was said, what went to the LLM, what came back, what the
+// tools did, and Buddy's reply.
+let testSource = null;
+let testThread = null;
+let testIntents = [];
+let testCovered = 0;
+const testCards = new Map();   // turn id -> { body, number }
+
+function testUserId() { return $("testUser").value || "consumer1"; }
+
+function drawIntents() {
+  const list = $("intentList"); list.textContent = "";
+  testIntents.forEach((intent, index) => {
+    list.append(el("div", "intent" + (index < testCovered ? " done" : index === testCovered ? " now" : ""), `${index < testCovered ? "✅" : index === testCovered ? "▶" : "·"} ${index + 1}. ${intent}`));
+  });
+}
+
+function testCard(turn, title) {
+  if (!testCards.has(turn)) {
+    const card = el("div", "turn");
+    const head = el("div", "turn-head");
+    head.append(el("b", "", title || "Turn"));
+    card.append(head);
+    $("testFeed").append(card);
+    testCards.set(turn, { card, head });
+  }
+  return testCards.get(turn);
+}
+
+function testStep(turn, icon, title, sub, bodyNodes = [], cls = "") {
+  const { card } = testCard(turn);
+  const step = el("div", "step new " + cls);
+  const main = el("div");
+  main.append(el("div", "ttl", title));
+  if (sub) main.append(el("div", "sub", sub));
+  for (const node of bodyNodes) main.append(node);
+  step.append(el("div", "ic", icon), main);
+  card.append(step);
+  const feed = $("testFeed");
+  if (feed.scrollHeight - feed.scrollTop - feed.clientHeight < 400) feed.scrollTop = feed.scrollHeight;
+}
+
+function folded(label, node, open = false) {
+  const box = el("details"); box.open = open;
+  box.append(el("summary", "", label), node);
+  return box;
+}
+
+function promptView(messages) {
+  const box = el("div");
+  for (const m of messages) {
+    const line = el("div", "msgline");
+    line.append(el("b", "", m.role + (m.tool ? ` (${m.tool})` : "")));
+    if (m.content) line.append(pre(m.content));
+    if (m.tool_calls) line.append(pre(m.tool_calls.map((c) => `→ ${c.name}(${c.arguments})`).join("\n")));
+    box.append(line);
+  }
+  return box;
+}
+
+function renderTestEvent(event) {
+  const d = event.data || {};
+  const turn = event.turn;
+  switch (event.kind) {
+    case "sim_start":
+      $("testFeed").textContent = ""; testCards.clear();
+      testThread = d.thread; testIntents = d.intents || []; testCovered = 0; drawIntents();
+      $("testOpen").disabled = false;
+      $("testFeed").append(el("div", "note", `Test started as consumer “${event.user_id}” (${d.turns} turns).`));
+      break;
+    case "sim_message": {
+      const { head } = testCard(turn, `#${d.number}`);
+      head.append(el("span", "sub", d.intent));
+      if (!d.covers_intent) head.append(badge("answering Buddy's question first", "ask"));
+      testStep(turn, "🧑", "Rohan says", "", [el("div", "", d.text)], "sim");
+      if (d.covers_intent) { testCovered += 1; drawIntents(); }
+      break;
+    }
+    case "turn_start":
+      // A message that is not the simulated consumer's: one you typed (or sent from the chat).
+      if (!testCards.has(turn)) {
+        const { head } = testCard(turn, "🙋 You");
+        head.append(el("span", "sub", "typed by you, as " + event.user_id));
+        testCards.get(turn).manual = true;
+        testStep(turn, "🙋", "You asked", "", [el("div", "", d.text)], "you");
+      }
+      break;
+    case "turn_end":
+      if (testCards.get(turn)?.manual) testStep(turn, "💬", "Buddy replies", `${(d.ms / 1000).toFixed(1)} s · tools: ${(d.tools || []).join(", ") || "none"}`, [el("div", "", d.reply)], "reply");
+      break;
+    case "context":
+      testStep(turn, "🗂️", "Context loaded", `thread ${d.thread} · ${d.history} earlier messages · tool groups: ${(d.groups || []).join(", ")} · about ${d.est_prompt_tokens} prompt tokens`,
+        d.long_term && d.long_term.length ? [el("div", "sub", "Pinned profile in the prompt: " + d.long_term.map((m) => m.text).join("; "))] : []);
+      break;
+    case "llm_request":
+      testStep(turn, "📤", `To the LLM (round ${d.round})`, `${d.messages.length} messages · ${d.tools.length} tools offered · tool_choice: ${d.tool_choice}`, [
+        folded("Tools offered", pre(d.tools.join(", "))),
+        folded("The whole request: system prompt, chat, new message", promptView(d.messages)),
+      ]);
+      break;
+    case "llm_result": {
+      const usage = d.usage && d.usage.total ? ` · ${d.usage.prompt} in / ${d.usage.completion} out tokens` : "";
+      const nodes = [];
+      if (d.tool_calls && d.tool_calls.length) nodes.push(pre(d.tool_calls.map((c) => `${c.name}(${c.arguments})`).join("\n")));
+      if (d.text) nodes.push(pre(d.text));
+      if (d.reasoning) nodes.push(folded("Model's reasoning", pre(d.reasoning)));
+      testStep(turn, "📥", `From the LLM: ${d.tool_calls && d.tool_calls.length ? "tool call" : "text"}`, `${d.provider} · ${d.ms} ms${usage}`, nodes);
+      break;
+    }
+    case "llm_retry":
+      testStep(turn, "🔁", "Messy output, asking again", d.reason, [pre(d.text || "")], "bad");
+      break;
+    case "llm_error":
+      testStep(turn, "❌", "Every LLM failed", `${d.ms} ms`, [pre(d.error)], "bad");
+      break;
+    case "tool_result": {
+      let result = d.result;
+      try { result = JSON.stringify(JSON.parse(d.result), null, 2); } catch { /* keep as text */ }
+      testStep(turn, d.ok ? "🔧" : "⚠️", `Tool ${d.name} ${d.ok ? "ran" : "refused"}`, `${d.ms} ms`, [pre(`${d.name}(${d.arguments})`), folded("Result", pre(result), true)], d.ok ? "" : "bad");
+      break;
+    }
+    case "db_change":
+      testStep(turn, "🗄️", `DB ${d.op} ${d.table} ${d.id}`, d.row + (d.change ? " · " + d.change : ""));
+      break;
+    case "code_reply":
+      testStep(turn, "🧩", "Reply written by code from the tool result", "no second LLM call");
+      break;
+    case "guard":
+      if (!String(d.note || "").startsWith("reply checked")) testStep(turn, "🛡️", "Guard changed the reply", d.note, [], "bad");
+      break;
+    case "sim_reply":
+      testStep(turn, "💬", "Buddy replies", `${d.provider || "fallback"} · ${(d.ms / 1000).toFixed(1)} s total · tools: ${(d.tools || []).join(", ") || "none"}`, [el("div", "", d.text)], "reply");
+      $("testStatus").textContent = `turn ${d.number} done`;
+      break;
+    case "sim_error":
+      $("testFeed").append(el("div", "note", "⚠️ " + d.error));
+      break;
+    case "sim_end":
+      $("testFeed").append(el("div", "note", `Test finished: ${d.done} turns, ${d.intents_covered} of ${d.intents_total} intents covered, ${Math.round(d.seconds / 60)} min.` + (d.error ? " Error: " + d.error : "")));
+      $("testStart").disabled = false; $("testStop").disabled = true;
+      $("testStatus").textContent = "finished";
+      break;
+  }
+}
+
+function connectTest() {
+  if (testSource) testSource.close();
+  testSource = new EventSource(`/v1/users/${encodeURIComponent(testUserId())}/trace`);
+  testSource.onopen = () => $("testDot").classList.add("on");
+  testSource.onerror = () => $("testDot").classList.remove("on");
+  testSource.onmessage = (message) => { try { renderTestEvent(JSON.parse(message.data)); } catch (error) { console.error(error); } };
+}
+
+async function refreshTestStatus() {
+  try {
+    const status = await api("/v1/test/status");
+    const running = Boolean(status.running);
+    $("testStart").disabled = running; $("testStop").disabled = !running;
+    if (status.user_id) { $("testUser").value = status.user_id; testThread = status.thread; $("testOpen").disabled = false; }
+    if (running) $("testStatus").textContent = `running · ${status.done}/${status.turns} turns`;
+  } catch { /* server restarting */ }
+}
+
+$("testBtn").addEventListener("click", async () => {
+  $("testPanel").classList.add("on"); $("testBtn").classList.add("on");
+  await refreshTestStatus();
+  connectTest();
+});
+$("testClose").addEventListener("click", () => {
+  $("testPanel").classList.remove("on"); $("testBtn").classList.remove("on");
+  if (testSource) { testSource.close(); testSource = null; }
+});
+$("testUser").addEventListener("change", connectTest);
+$("testStart").addEventListener("click", async () => {
+  $("testStart").disabled = true;
+  try {
+    const status = await api("/v1/test/start", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: testUserId(), turns: Number($("testTurns").value), gap_seconds: Number($("testGap").value) }) });
+    testThread = status.thread; $("testStop").disabled = false;
+    $("testStatus").textContent = "running";
+  } catch (error) { $("testStatus").textContent = "could not start: " + error.message; $("testStart").disabled = false; }
+});
+$("testStop").addEventListener("click", async () => {
+  await api("/v1/test/stop", { method: "POST" });
+  $("testStatus").textContent = "stopping after this turn…";
+});
+$("testAsk").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const text = $("testAskText").value.trim();
+  if (!text) return;
+  $("testAskText").value = "";
+  if (!testSource) connectTest();
+  try {
+    // Same chat as the test: the trace shows it here; a running test waits for it (one message at a time).
+    await api("/v1/chat", { method: "POST", body: JSON.stringify({ user_id: testUserId(), text }) });
+  } catch (error) { $("testFeed").append(el("div", "note", "Could not send: " + error.message)); }
+});
+$("testOpen").addEventListener("click", () => {
+  if (!testThread) return;
+  const thread = testThread;
+  $("testClose").click();
+  store("companion.user", testUserId());
+  loadUsers(testUserId()).then(() => { openThread(thread); if (traceOpen) connectTrace(); });
+});
+</script>
+</body>
+</html>
