@@ -3,7 +3,7 @@
     .venv/bin/python -m companion.cli            # user id "me"
     .venv/bin/python -m companion.cli --user ashish --debug
 
-Commands: /memory (what Buddy remembers), /reminders, /quit
+Commands: /memory (what Umbrella remembers), /reminders, /quit
 """
 
 from __future__ import annotations

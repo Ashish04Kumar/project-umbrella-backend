@@ -101,7 +101,7 @@ ALL_DAY_HOUR = 9   # a full-day reminder is said out loud at 9:00 that morning
 
 
 def _answers_question(ctx: ToolContext) -> bool:
-    """This message answers Buddy's question, so the message before it still counts ("my exam is on Friday"
+    """This message answers Umbrella's question, so the message before it still counts ("my exam is on Friday"
     → "Save it as a reminder?" → "add in reminder": the day is Friday)."""
     from ..router import is_tool_question
 
@@ -110,7 +110,7 @@ def _answers_question(ctx: ToolContext) -> bool:
 
 
 def _same_question(ask: str, ctx: ToolContext) -> bool:
-    """Buddy asked this very question last time: asking again would loop (it did on a misspelt "tommorow")."""
+    """Umbrella asked this very question last time: asking again would loop (it did on a misspelt "tommorow")."""
     return ask.split("?")[0].strip().lower() == (ctx.last_assistant or "").split("?")[0].strip().lower()
 
 
@@ -611,11 +611,11 @@ async def reminder_list(ctx: ToolContext, args: ReminderList) -> dict[str, Any]:
 
 
 class ReminderPick(Fields):
-    """How the user points at a reminder: words, and when several match, a date, a number from Buddy's
+    """How the user points at a reminder: words, and when several match, a date, a number from Umbrella's
     list, or the id a list showed."""
     match: str | None = Field(default=None, max_length=120, description="Words that identify it, e.g. 'study'")
     day: date | None = Field(default=None, description="Its date, when the user names one ('the one on Wednesday'): YYYY-MM-DD")
-    number: int | None = Field(default=None, ge=1, le=20, description="The user's pick from Buddy's numbered list ('the 2nd' = 2)")
+    number: int | None = Field(default=None, ge=1, le=20, description="The user's pick from Umbrella's numbered list ('the 2nd' = 2)")
     reminder_id: str | None = Field(default=None, max_length=36, description="The id from a reminder list, if you have it")
 
     _none = field_validator("match", "day", "number", "reminder_id", mode="before")(lambda cls, v: _empty_to_none(v))
@@ -681,7 +681,7 @@ async def _one_reminder(ctx: ToolContext, args: ReminderPick, *, allow_all: bool
 
 class ReminderCancel(ReminderPick):
     all_matching: bool = Field(default=False, description="True when the user wants every matching reminder cancelled ('all')")
-    confirm: bool = Field(default=False, description="True only after the user said yes to Buddy's (yes/no) question")
+    confirm: bool = Field(default=False, description="True only after the user said yes to Umbrella's (yes/no) question")
 
 
 async def reminder_cancel(ctx: ToolContext, args: ReminderCancel) -> dict[str, Any]:
@@ -1119,7 +1119,7 @@ def build_registry(settings: Settings) -> ToolRegistry:
         Tool("ltm_forget", "Remove something from long-term memory by words.", ForgetMatch, ltm_forget, "long", W),
         # reminders
         Tool("reminder_add", "Set a reminder ONLY when the user asks to be reminded. Leave `when` empty if they gave no time.", ReminderAdd, reminder_add, "reminder", W, ("save",)),
-        Tool("reminder_cancel", "Cancel a reminder. Give its words; when Buddy listed numbered choices, pass the user's pick as "
+        Tool("reminder_cancel", "Cancel a reminder. Give its words; when Umbrella listed numbered choices, pass the user's pick as "
              "`number` (or `day` for a date they name). 'All of them' -> all_matching=true, then confirm=true only after their yes.",
              ReminderCancel, reminder_cancel, "reminder", W),
         Tool("reminder_move", "Change one reminder's time.", ReminderMove, reminder_move, "reminder", W),

@@ -238,7 +238,7 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(Store.saved.date().isoformat(), "2026-10-21")
 
     def test_own_day_word_is_not_mixed_with_the_message_before(self):
-        """'…open on Friday?' then Buddy asks a question, then 'add pay rent to my to-dos for tomorrow':
+        """'…open on Friday?' then Umbrella asks a question, then 'add pay rent to my to-dos for tomorrow':
         tomorrow must not be checked against the old Friday (English test, 20 Oct)."""
         from companion.tools.builtin import _check_relative_day
 

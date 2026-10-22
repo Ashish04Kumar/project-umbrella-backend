@@ -57,8 +57,8 @@ class TurnState(TypedDict, total=False):
     tool_actions: list[str]           # short lines like "create_reminder ok: {...}" for the extractor and logs
     tool_results: list[dict[str, Any]]  # {"name": ..., "result": {...}} for the confirmation fallback
     code_reply: bool                    # the reply was built by code from write-tool results
-    last_assistant: str                 # Buddy's previous message (a tool's question makes the answer need a tool)
-    previous_user: str                  # the user's message before this one (answers to Buddy's questions build on it)
+    last_assistant: str                 # Umbrella's previous message (a tool's question makes the answer need a tool)
+    previous_user: str                  # the user's message before this one (answers to Umbrella's questions build on it)
     db_changes: list[dict[str, Any]]    # what the tools changed in the database this turn (store/audit.py)
     groups: list[str]                 # tool groups the router offers for this message
     done: bool                        # the agent has its final answer (or every LLM failed)

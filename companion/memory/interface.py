@@ -35,7 +35,7 @@ class MemoryItem(BaseModel):
     pinned: bool = False          # profile facts that go with every message
     data: dict[str, Any] = Field(default_factory=dict)
     confidence: float = 1.0
-    status: Literal["active", "pending"] = "active"   # pending = Buddy should ask before keeping it
+    status: Literal["active", "pending"] = "active"   # pending = Umbrella should ask before keeping it
     sensitive: bool = False
     expires_at: datetime | None = None
     created_at: datetime | None = None

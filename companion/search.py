@@ -61,7 +61,7 @@ def fuse(rows: list[dict[str, Any]], *, boost_key: str = "boost") -> list[dict[s
 def pick(candidates: list[dict[str, Any]], *, score_key: str = "s") -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     """Choose the one item a change is about.
 
-    Returns (item, []) when there is one clear match, (None, candidates) when Buddy must ask which,
+    Returns (item, []) when there is one clear match, (None, candidates) when Umbrella must ask which,
     and (None, []) when nothing matches."""
     if not candidates:
         return None, []

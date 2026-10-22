@@ -2,7 +2,7 @@
 
 Pure rules (no audio, no network) so they can be tested on their own. LiveTurns in agent.py calls them.
 
-End of turn. After the user stops, Buddy waits before answering. How long depends on two signals:
+End of turn. After the user stops, Umbrella waits before answering. How long depends on two signals:
 - Smart Turn v3 (pipecat's small on-device model) listens to the last few seconds of the user's voice
   and says how likely it is that they finished (intonation, rhythm; about 0.2 s on a CPU);
 - the words: a turn that ends on "and", "aur", "ki", "umm" or a comma is not finished, whatever the voice says.
@@ -12,9 +12,9 @@ End of turn. After the user stops, Buddy waits before answering. How long depend
     Smart Turn says maybe not             -> MEDIUM_WAIT (the words look complete, so not too long)
     no Smart Turn verdict                 -> UNKNOWN_WAIT (the old fixed pause)
 
-Barge-in. Talking over Buddy stops it only after BARGE_IN_SECONDS of continuous speech, so a cough,
+Barge-in. Talking over Umbrella stops it only after BARGE_IN_SECONDS of continuous speech, so a cough,
 "hmm" or "haan" does not cut it off. Short stop words ("wait", "ruko") stop it as soon as they are heard.
-Backchannels said over Buddy ("ok", "haan", "hmm") are not answered as a new turn.
+Backchannels said over Umbrella ("ok", "haan", "hmm") are not answered as a new turn.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ UNKNOWN_WAIT = 0.8
 MAX_WAIT = 3.0          # never leave the user waiting longer than this after they stopped
 COMPLETE_PROBABILITY = 0.5
 
-BARGE_IN_SECONDS = 0.5  # continuous speech over Buddy before it stops talking
+BARGE_IN_SECONDS = 0.5  # continuous speech over Umbrella before it stops talking
 MERGE_WINDOW = 4.0      # going on within this many seconds of a sent turn (before any reply is heard) = one message
 
 # Words that leave a sentence open, in English and Roman Hinglish. Whisper often adds a full stop
@@ -87,7 +87,7 @@ def end_of_turn_wait(probability: float | None, text: str) -> tuple[float, str]:
 
 
 def is_backchannel(text: str) -> bool:
-    """A short acknowledgement ("ok", "haan ji", "hmm right"): not a new turn when said over Buddy."""
+    """A short acknowledgement ("ok", "haan ji", "hmm right"): not a new turn when said over Umbrella."""
     words = _words(text)
     return 0 < len(words) <= 3 and all(word in BACKCHANNELS for word in words)
 

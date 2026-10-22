@@ -12,7 +12,7 @@ Today in the examples: Mon 19 Oct 2026.
 2. **Routing uses both keyword and intent.** A keyword is a strong hint; the meaning decides.
    "Yaad rakhna, Riya ne mujhe reminder diya tha" has the word *reminder*, but it is a fact about Riya,
    not a request to be reminded, so it goes to memory.
-3. **If it is really unclear, Buddy asks one short question** instead of guessing
+3. **If it is really unclear, Umbrella asks one short question** instead of guessing
    ("Short term mein rakhun ya long term?", "Kis time yaad dilaun?").
 4. **The LLM never writes SQL.** It picks a tool and fills its fields; the code runs fixed SQL.
    Counting, totals and date filters are done by SQL, so numbers are always right.
@@ -21,7 +21,7 @@ Today in the examples: Mon 19 Oct 2026.
 6. **After a save/change, the confirmation is written by code** ("Reminder set: dawai, Tue 20 Oct, 9:00 AM"),
    so the second LLM call is skipped.
 7. **Matching by words, not ids.** "Doodh wala kaam ho gaya" is enough: the tool finds the item.
-   One match: done. Several: Buddy asks which one. None: Buddy says so.
+   One match: done. Several: Umbrella asks which one. None: Umbrella says so.
 
 ## 2. How a message is routed (keyword + intent)
 
@@ -55,9 +55,9 @@ your message
 
 ## 2b. Human in the loop (essential)
 
-Buddy keeps you in the loop instead of guessing. It asks **one short question** when:
+Umbrella keeps you in the loop instead of guessing. It asks **one short question** when:
 
-| Situation | Example | Buddy asks |
+| Situation | Example | Umbrella asks |
 |---|---|---|
 | A required field is missing | "Bill ka reminder laga do" | "Kab yaad dilaun?" |
 | Two places fit equally | "Yaad rakhna, Riya ne reminder diya tha bill ka" | "Short term mein note karun, ya bill ka reminder bhi lagaun?" |
@@ -71,7 +71,7 @@ How it works:
 "Bill ka reminder laga do"
   → tool: reminder_add(text="Bill") without a time → the tool answers "needs_time"
   → saved as a pending action on this thread: {action: reminder_add, text: "Bill", waiting_for: "time"}
-  → Buddy: "Kab yaad dilaun?"        (the playground shows quick buttons where it can: "Aaj shaam", "Kal subah")
+  → Umbrella: "Kab yaad dilaun?"        (the playground shows quick buttons where it can: "Aaj shaam", "Kal subah")
 "Kal 10 baje"
   → the pending action is filled: reminder_add("Bill", 2026-10-20T10:00) → "Reminder set: Bill, Tue 20 Oct, 10:00 AM"
 ```
@@ -89,9 +89,9 @@ Both scopes live in one table (`memories`, column `scope`), so a question never 
 
 `find_saved(query?, subject?, category?, from?, to?, month?, in?)` — one SQL over short-term memory,
 long-term memory **and notes** (`expires_at` hides expired short-term items). Each result says where it
-came from, so Buddy can answer "Wifi password abc123 hai (12 Oct ke note se)" or "Riya ka birthday 3 May
+came from, so Umbrella can answer "Wifi password abc123 hai (12 Oct ke note se)" or "Riya ka birthday 3 May
 hai; short term mein likha hai ki kal gift dena hai". `in` (`short` | `long` | `notes`) is set only when you
-say it ("mere notes mein…", "short term mein kya hai?"). Nothing found anywhere → Buddy says so and offers
+say it ("mere notes mein…", "short term mein kya hai?"). Nothing found anywhere → Umbrella says so and offers
 to save it. To-dos, reminders and lists keep their own list tools (their questions name them, and they are
 filtered by day, status or tick).
 
@@ -113,7 +113,7 @@ knowledge base, long documents or thousands of items. `find_saved` keeps the sam
 
 Every store can be cleared by voice/text **or** from the playground panels (a "Clear" button per store):
 
-| You say | Tool | Buddy first asks |
+| You say | Tool | Umbrella first asks |
 |---|---|---|
 | "Short term memory clear kar do" | `clear_saved(store=short)` | "Short term ki 6 baatein hata dun? (haan / nahi)" |
 | "Long term saaf kar do" | `clear_saved(store=long)` | "Long term ki 14 baatein hamesha ke liye hata dun? Ye wapas nahi aayengi." |
@@ -126,13 +126,13 @@ Bulk clearing is always two steps: the tool first returns the count and a short 
 action; only "haan" runs it. A panel button asks the same in a small confirm box. One item ("doodh wala hata do")
 is removed at once.
 
-## 2e. When a reminder is due: Buddy says it out loud
+## 2e. When a reminder is due: Umbrella says it out loud
 
 ```
 due_at reached (server checks every 20 s)
-  → playground: Buddy speaks it (TTS), the robot looks at you, a chat bubble + popup appear
+  → playground: Umbrella speaks it (TTS), the robot looks at you, a chat bubble + popup appear
       "Ashish, 9 baj gaye: dawai lene ka time ho gaya."
-  → Buddy asks: "Ho gaya?"   [✅ Ho gaya]  [⏰ 10 min baad]
+  → Umbrella asks: "Ho gaya?"   [✅ Ho gaya]  [⏰ 10 min baad]
       ✅ / "ho gaya"           → status done
       ⏰ / "10 minute baad"     → due_at + 10 min (snoozed)
       no answer for 10 min     → said once more, then left as "fired"
@@ -140,7 +140,7 @@ due_at reached (server checks every 20 s)
 ```
 
 Reminder statuses: `pending → fired → done | snoozed | cancelled`. The page must be open to speak (for now);
-later the Android app (notifications) and the robot body speak it the same way. In a live call, Buddy says it
+later the Android app (notifications) and the robot body speak it the same way. In a live call, Umbrella says it
 between turns.
 
 ## 3. Data and tools per feature
@@ -382,7 +382,7 @@ Tools: `list_add(list, items[])`, `list_show(list?)` (no name → all lists with
 ## 5. Decisions needed
 
 1. STM lifetime: 10 days default (at most 15)? 
-2. "Yaad rakhna" without "short/long term": let Buddy decide by meaning (birthday → long, payment → short), or always ask?
+2. "Yaad rakhna" without "short/long term": let Umbrella decide by meaning (birthday → long, payment → short), or always ask?
 3. Turn the background memory extractor off completely (save only when asked)?
 4. Pinned profile facts (name, city) with every message: yes, at most 8?
 5. To-dos with no day: today? Pending ones stay on their day and show as overdue (no automatic carry-over)?

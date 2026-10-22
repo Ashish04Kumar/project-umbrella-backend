@@ -124,7 +124,7 @@ Messages and memory are saved in our own store, not a LangGraph checkpointer, so
 | Medical, legal, money | LLM general info | Plus "kisi expert se confirm kar lena" |
 | Self-harm or abuse | Safety reply | Gentle reply and a helpline; no jokes |
 
-Buddy has no life of its own (no home, family, trips). It never claims to have done things.
+Umbrella has no life of its own (no home, family, trips). It never claims to have done things.
 
 ## 6. Tools
 
@@ -138,7 +138,7 @@ Buddy has no life of its own (no home, family, trips). It never claims to have d
 | todo / note / list | `todo_add`, `todo_done`, `todo_remove`, `todo_move` / `note_save`, `note_delete` / `list_add`, `list_check`, `list_remove`, `list_clear` | Their keywords |
 | clear | `clear_saved` (count first, `confirm=true` only after a yes) | "clear", "delete all" ... |
 
-`companion/router.py` picks the groups from keywords in the message (and in Buddy's last question, for follow-ups like "9 baje"); the LLM then decides by meaning. Later: `read_call_insights`, `knowledge_base_search`, expenses/goals/habits, calendar, robot tools.
+`companion/router.py` picks the groups from keywords in the message (and in Umbrella's last question, for follow-ups like "9 baje"); the LLM then decides by meaning. Later: `read_call_insights`, `knowledge_base_search`, expenses/goals/habits, calendar, robot tools.
 
 Every tool has a Pydantic args model. Invalid arguments are rejected in code and the LLM is told why. Write tools return `say` (what happened) or `ask` (one question back, e.g. "When should I remind you?"); when only write tools ran, that text is the reply, built by code, with no second LLM call. Matching by words (`search.pick`) acts on one clear hit and asks when several are close. Bulk deletes always ask first.
 
@@ -152,7 +152,7 @@ English test fixes (20 Oct, `docs/test-reports/2026-10-20-english-test.md`): a l
 
 **Every database change is recorded** (`store/audit.py`): one server log line per change, e.g. `🗄️ DB UPDATE reminders fd98c0f2 ("play football", Wed 21 Oct 4:00 PM): status pending → cancelled`; inside a turn it is also a trace event (`db_change`, shown in the Test tab) and part of the reply object (`db_changes`, shown on the chat's `{ } backend response`). Cancelling a reminder never deletes the row: its status becomes `cancelled`. A weekday the user names must match the date chosen.
 
-Date and time checks in code (models get these wrong, live tests 19–20 Oct): a date in a past year is sent back with this week's dates; when the user said "today / tomorrow / day after" ("aaj / kal / parson") the date must match, and between midnight and 5 AM "tomorrow" is asked about (later today or the next day); a reminder at 1–5 o'clock asks "AM (night) or PM?" unless the user said AM or night; the same reminder (words and time) is never stored twice. Buddy's previous message only offers its tool groups to the next message when it asked a question, so "hi" after "Reminder set…" cannot repeat the action.
+Date and time checks in code (models get these wrong, live tests 19–20 Oct): a date in a past year is sent back with this week's dates; when the user said "today / tomorrow / day after" ("aaj / kal / parson") the date must match, and between midnight and 5 AM "tomorrow" is asked about (later today or the next day); a reminder at 1–5 o'clock asks "AM (night) or PM?" unless the user said AM or night; the same reminder (words and time) is never stored twice. Umbrella's previous message only offers its tool groups to the next message when it asked a question, so "hi" after "Reminder set…" cannot repeat the action.
 
 ## 7. Memory
 
@@ -189,7 +189,7 @@ Adapters: `postgres`, `in_memory` (tests), `cloud` (the owner's memory project, 
 
 ### Saving only when asked
 
-Buddy saves only when the user asks ("remember ...", "short term ...", "note down ...", "remind me ..."). The background extractor that guessed facts after every message is off (`COMPANION_AUTO_MEMORY=false`, saves about 1,500 tokens a message); its code stays in `memory/extractor.py` for later. The guard replaces any reply that claims something was saved or changed when no tool ran.
+Umbrella saves only when the user asks ("remember ...", "short term ...", "note down ...", "remind me ..."). The background extractor that guessed facts after every message is off (`COMPANION_AUTO_MEMORY=false`, saves about 1,500 tokens a message); its code stays in `memory/extractor.py` for later. The guard replaces any reply that claims something was saved or changed when no tool ran.
 
 ## 8. Database tables
 
@@ -248,13 +248,13 @@ Body mic ─LiveKit─▶ Silero VAD ─▶ VadTap ─▶ STT (companion.voice) 
 | Silence nudge | One gentle follow-up after `COMPANION_SILENCE_NUDGE_SECONDS` (10) of quiet, grounded in their last words, never twice without a new user turn, never in safety mode or during the goodbye. |
 | Greeting | When the user joins: by name and with what's coming up, from memory. |
 | Safety | Crisis words (English/Hinglish) -> `safety_resources` message (Tele-MANAS 14416, 112) and no more nudges. |
-| Messages to the body | JSON over the LiveKit data channel: `caption_delta {role,text}` (Buddy's words the moment the model writes them), `caption {role,text}` (the full turn), `expression {expression}`, `state {listening|thinking|speaking|idle}`, `safety_resources`. (Pipecat also sends its own `rtvi-ai` messages; bodies can ignore them.) |
+| Messages to the body | JSON over the LiveKit data channel: `caption_delta {role,text}` (Umbrella's words the moment the model writes them), `caption {role,text}` (the full turn), `expression {expression}`, `state {listening|thinking|speaking|idle}`, `safety_resources`. (Pipecat also sends its own `rtvi-ai` messages; bodies can ignore them.) |
 
-Measured (headless LiveKit test, `scripts/live_e2e.py`): greeting, normal turn, barge-in, nudge (after ~12 s, once) all pass. From the end of speech to Buddy's first audio: **~6.2 s with Groq STT** (7.3 s with laptop Whisper). Roughly: Silero VAD needs ~0.8 s of quiet to end the turn, Groq STT ~0.9–1.4 s per stretch of speech, Pod 4's turn-taking waits (0.6 s after the last piece, 0.7 s of silence), the LLM's first sentence ~1.0–1.5 s, Piper ~0.3 s, plus LiveKit transport and the test client's own buffering. Further cuts would mean shorter turn-taking waits (risk: answering while the user only paused), which Pod 4 tuned on purpose.
+Measured (headless LiveKit test, `scripts/live_e2e.py`): greeting, normal turn, barge-in, nudge (after ~12 s, once) all pass. From the end of speech to Umbrella's first audio: **~6.2 s with Groq STT** (7.3 s with laptop Whisper). Roughly: Silero VAD needs ~0.8 s of quiet to end the turn, Groq STT ~0.9–1.4 s per stretch of speech, Pod 4's turn-taking waits (0.6 s after the last piece, 0.7 s of silence), the LLM's first sentence ~1.0–1.5 s, Piper ~0.3 s, plus LiveKit transport and the test client's own buffering. Further cuts would mean shorter turn-taking waits (risk: answering while the user only paused), which Pod 4 tuned on purpose.
 
 ## 8d. Trace panel (seeing what the agent does)
 
-The playground's **🧠 Trace** button opens three live columns (each chat bubble also has a `{ }` button: on your message the request object that went to the backend, incl. voice cues; on Buddy's reply the whole response object; the streams carry them as `request`/`response` events, live turns as a `turn_objects` message):
+The playground's **🧠 Trace** button opens three live columns (each chat bubble also has a `{ }` button: on your message the request object that went to the backend, incl. voice cues; on Umbrella's reply the whole response object; the streams carry them as `request`/`response` events, live turns as a `turn_objects` message):
 
 | Column | Shows |
 | --- | --- |
@@ -274,7 +274,7 @@ How it works: `companion/trace.py` (`TraceHub`) collects events from the graph a
 
 ## 8e. Streaming and input modes
 
-Every reply streams: `POST /v1/chat/stream` (text) and `POST /v1/voice/stream` (push-to-talk) send server-sent events: `delta` (new text as it is written), `expression` (as soon as the mood tag is read, before any words), `sentence` (a checked sentence), `audio` (push-to-talk only: that sentence's voice, base64 WAV), `done` (the whole reply object). Live voice streams over LiveKit. Text replies keep their line breaks and have no word limit; spoken replies stop at ~70 words. Pressing the mic while Buddy talks stops its voice and the stream (only the spoken part is saved).
+Every reply streams: `POST /v1/chat/stream` (text) and `POST /v1/voice/stream` (push-to-talk) send server-sent events: `delta` (new text as it is written), `expression` (as soon as the mood tag is read, before any words), `sentence` (a checked sentence), `audio` (push-to-talk only: that sentence's voice, base64 WAV), `done` (the whole reply object). Live voice streams over LiveKit. Text replies keep their line breaks and have no word limit; spoken replies stop at ~70 words. Pressing the mic while Umbrella talks stops its voice and the stream (only the spoken part is saved).
 
 **Push-to-talk with a confirm step.** While you hold the mic on, the playground sends the audio so far to `POST /v1/stt` about every 1.5 s and shows your words in the input box (not true streaming STT: the text updates in steps). Stopping the mic only stops: the final transcript of the whole clip goes into the box, you can fix it, and **Send** sends the clip to `/v1/voice/stream` with `text=` (the words you confirmed). Then STT is skipped and the guard trusts the text, but the audio is still used for voice cues and the reply is still spoken.
 
@@ -284,7 +284,7 @@ Every reply streams: `POST /v1/chat/stream` (text) and `POST /v1/voice/stream` (
 | --- | --- | --- |
 | `TEXT` | typing | False |
 | `PUSH_TO_TALK` | 🎤 | False |
-| `PUSH_TO_TALK_CUES` | 🎙️✨ | True: Silero VAD finds the speech in the clip; the body sends the gap since Buddy's voice ended and whether it cut in |
+| `PUSH_TO_TALK_CUES` | 🎙️✨ | True: Silero VAD finds the speech in the clip; the body sends the gap since Umbrella's voice ended and whether it cut in |
 | `LIVE` | 📞 | True |
 
 The "usual" pace, loudness and pitch are kept per user and shared by all voice modes (in memory, reset when the server restarts).
@@ -293,7 +293,7 @@ The "usual" pace, loudness and pitch are kept per user and shared by all voice m
 
 Shared list in `expressions.py`: body states `idle`, `listening`, `thinking`, `speaking`, `error`, and reply moods `happy`, `curious`, `concerned`, `playful`, `surprised`, `excited`, `sad` (the last three are new). The LLM starts every reply with a mood tag, for example `[curious] Achha, phir kya hua?`; the guard strips it and returns it as `expression` (unknown or missing = `idle`). Starting with a tag (instead of JSON) keeps the reply streamable, and in streams `expression` is sent as soon as the tag is read, before any words.
 
-**UI plugins (plug and play).** `COMPANION_UI_PLUGINS=robot` (comma list) switches front-end plugins on. Each lives in `companion/server/plugins/<name>/` with a `plugin.js` exporting `mount(container, bus)`; the server serves only switched-on plugins at `/plugins/<name>/...` and lists them in `/health`. The playground loads each one into the stage above the chat and gives it a small event bus: `state` (idle / listening / thinking / speaking / error), `expression` (the reply mood) and `level` (0..1: your mic while recording, Buddy's voice while it plays, computed from each WAV or from the LiveKit track in live mode). A new body (another avatar, a status light) is a new folder with its own `mount()`.
+**UI plugins (plug and play).** `COMPANION_UI_PLUGINS=robot` (comma list) switches front-end plugins on. Each lives in `companion/server/plugins/<name>/` with a `plugin.js` exporting `mount(container, bus)`; the server serves only switched-on plugins at `/plugins/<name>/...` and lists them in `/health`. The playground loads each one into the stage above the chat and gives it a small event bus: `state` (idle / listening / thinking / speaking / error), `expression` (the reply mood) and `level` (0..1: your mic while recording, Umbrella's voice while it plays, computed from each WAV or from the LiveKit track in live mode). A new body (another avatar, a status light) is a new folder with its own `mount()`.
 
 **The robot plugin** is a port of the Synq app's Buddy tab robot (`mobile/src/features/buddy/robot/`) to plain three.js 0.186.1 (same version as the app, loaded from jsDelivr through an import map): the same `gg2-head.glb`, region colours, face shaders, saccade gaze, blinks, head float/sway/nods and mouth that follows loudness. On top of the five states it draws the seven moods (each with its own lids, pupils, mouth, head tilt, screen tint and liveliness; playful winks, surprised and excited open the mouth, sad looks down). A mood shows for 8 s after the reply and stays while Buddy speaks; listening, thinking and error always win. Open the playground with `?demo=robot` to cycle through every state and mood without the backend. It needs WebGL; without it the stage shows a short message.
 
@@ -326,9 +326,9 @@ Triggers: app opened / person seen, due reminders, working-memory follow-ups ("i
 | `COMPANION_OLLAMA_MODEL` | `qwen3:4b` | Laptop fallback |
 | `COMPANION_DATABASE_URL`, `COMPANION_DB_SCHEMA` | `postgresql://...`, `companion` | Store and memory |
 | `COMPANION_MEMORY` | `postgres` | Memory adapter |
-| `TAVILY_API_KEY` | | Web search; without it the tool is off and Buddy says it cannot check live info |
+| `TAVILY_API_KEY` | | Web search; without it the tool is off and Umbrella says it cannot check live info |
 | `COMPANION_TIMEZONE` | `Asia/Kolkata` | Default user timezone |
-| `COMPANION_NAME` | `Buddy` | Persona name |
+| `COMPANION_NAME` | `Umbrella` | Persona name |
 
 Keys stay on the backend. With Groq, the user's messages and the selected memories go to Groq; with Tavily, search queries go to Tavily. Ollama keeps everything on the machine.
 

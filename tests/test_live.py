@@ -260,13 +260,13 @@ class LiveTurnTests(unittest.TestCase):
         async def run():
             turns, _ = make_turns(FakeBrain())
             turns._bot_speaking = True
-            # A cough or "hmm" over Buddy: under half a second, Buddy keeps talking.
+            # A cough or "hmm" over Umbrella: under half a second, Umbrella keeps talking.
             await turns.on_user_started(time.monotonic())
             await asyncio.sleep(0.2)
             turns.on_user_stopped(time.monotonic())
             await asyncio.sleep(0.5)
             self.assertFalse(turns.interrupted)
-            # Real talking over Buddy: it stops after half a second and the stream is cut.
+            # Real talking over Umbrella: it stops after half a second and the stream is cut.
             await turns.on_user_started(time.monotonic())
             await asyncio.sleep(0.65)
             self.assertTrue(turns.interrupted)
@@ -281,12 +281,12 @@ class LiveTurnTests(unittest.TestCase):
             await speak(turns, 0.3)                      # short: no barge-in by time
             turns._on_transcript("ok haan", time.monotonic())
             await asyncio.sleep(1.0)
-            self.assertEqual(brain.turns, [])            # "ok haan" over Buddy is not a turn
+            self.assertEqual(brain.turns, [])            # "ok haan" over Umbrella is not a turn
             self.assertFalse(turns.interrupted)
             await speak(turns, 0.3)
             turns._on_transcript("wait", time.monotonic())
             await asyncio.sleep(0.2)
-            self.assertTrue(turns.interrupted)           # "wait" stops Buddy even though it was short
+            self.assertTrue(turns.interrupted)           # "wait" stops Umbrella even though it was short
             self.assertEqual(brain.turns, [])
         asyncio.run(run())
 
@@ -322,7 +322,7 @@ class LiveTurnTests(unittest.TestCase):
             turns, _ = make_turns(brain, probability=0.9)
             await speak(turns, 0.6)
             turns._on_transcript("add milk to my shopping list.", time.monotonic())
-            await asyncio.sleep(0.8)                     # sent; Buddy is thinking (nothing heard yet)
+            await asyncio.sleep(0.8)                     # sent; Umbrella is thinking (nothing heard yet)
             self.assertEqual(len(brain.turns), 1)
             await speak(turns, 0.6)                      # they go on talking
             turns._on_transcript("and eggs too.", time.monotonic())

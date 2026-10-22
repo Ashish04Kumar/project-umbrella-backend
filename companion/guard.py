@@ -11,7 +11,7 @@ from .expressions import ANY_TAG_PATTERN, DEFAULT_EXPRESSION, normalize
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 _TAG = re.compile(r"^\s*\[([a-zA-Z_]+)\]\s*")
 _ANY_TAG = re.compile(ANY_TAG_PATTERN, re.IGNORECASE)
-_SPEAKER = re.compile(r"^\s*(assistant|buddy)\s*:\s*", re.IGNORECASE)
+_SPEAKER = re.compile(r"^\s*(assistant|buddy|umbrella)\s*:\s*", re.IGNORECASE)
 # Our own instruction notes, if a model copies one into its reply (live test, 20 Oct).
 _OUR_NOTES = re.compile(r"\((?:Their latest message is in English|No new words from them)[^)]*\)\s*", re.IGNORECASE)
 

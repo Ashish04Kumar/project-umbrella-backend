@@ -1,4 +1,4 @@
-# Search and retrieval: how Buddy finds what you saved
+# Search and retrieval: how Umbrella finds what you saved
 
 Status: **built (19 Oct 2026).** Tests: `tests/test_golden_search.py` (sample data below, tool calls from section 6), router and guard tests in `tests/test_units.py`. Companion to [personal-data-spec.md](personal-data-spec.md)
 (what is saved and how). This file is about **finding it again**: the tools, the search strategy for each
@@ -87,7 +87,7 @@ btree on `(user_id, day, status)` for to-dos, `(user_id, status, due_at)` for re
 | Other | `calculate`, `web_search` | Exists | Unchanged |
 
 **Match by words** (`match`): the tool searches the right store (pending items first) with the same
-full-text + fuzzy matchers. 1 hit → act. Several → returns the candidates and Buddy asks "kaunsa?". 0 → says so.
+full-text + fuzzy matchers. 1 hit → act. Several → returns the candidates and Umbrella asks "kaunsa?". 0 → says so.
 
 ---
 
@@ -149,7 +149,7 @@ Rules for combined questions:
 
 ### 6.1 Short-term memory
 
-| # | You ask | Tool call | Buddy answers |
+| # | You ask | Tool call | Umbrella answers |
 |---|---|---|---|
 | 1 | Short term mein kya-kya hai? | `find_saved(in=short)` | "6 baatein: Rahul ko 2500 diye (17 Oct), car service ko di (17 Oct), Amit ka parcel kal aayega, is hafte diet, 24 Oct passport office, landlord ka rent baaki." |
 | 2 | Maine Rahul ko kitne diye the? | `find_saved(entities=["Rahul"])` | "17 Oct ko 2500." |
@@ -164,7 +164,7 @@ Rules for combined questions:
 
 ### 6.2 Long-term memory
 
-| # | You ask | Tool call | Buddy answers |
+| # | You ask | Tool call | Umbrella answers |
 |---|---|---|---|
 | 1 | Riya ka birthday kab hai? | `find_saved(subject="Riya")` | "3 May." |
 | 2 | Is mahine kiska birthday hai? | `find_saved(in=long, category=date, month=10)` | "Is mahine koi birthday saved nahi hai." |
@@ -179,7 +179,7 @@ Rules for combined questions:
 
 ### 6.3 Reminders
 
-| # | You ask | Tool call | Buddy answers |
+| # | You ask | Tool call | Umbrella answers |
 |---|---|---|---|
 | 1 | Mere reminders kya hain? | `reminder_list()` | "4: dawai roz 9 baje, gym Friday 6 baje, team call har Monday 10 baje, rent har mahine 5 ko." |
 | 2 | Kal ke reminders? | `reminder_list(from=10-20, to=10-20)` | "Kal subah 9 baje dawai." |
@@ -194,7 +194,7 @@ Rules for combined questions:
 
 ### 6.4 To-dos
 
-| # | You ask | Tool call | Buddy answers |
+| # | You ask | Tool call | Umbrella answers |
 |---|---|---|---|
 | 1 | Aaj ke to-do mein kya baaki hai? | `todo_list(day=10-19, status=pending)` | "2 baaki: bill bharna (high), Amit ko call. Kal ka bank jaana bhi reh gaya hai." |
 | 2 | Kal ke to-do mein kya tha? | `todo_list(day=10-18, status=all)` | "Bank jaana (baaki) aur groceries (ho gaya)." |
@@ -209,7 +209,7 @@ Rules for combined questions:
 
 ### 6.5 Notes
 
-| # | You ask | Tool call | Buddy answers |
+| # | You ask | Tool call | Umbrella answers |
 |---|---|---|---|
 | 1 | Wifi password kya hai? | `find_saved(query="wifi password")` | "abc123 (12 Oct ke note se)." |
 | 2 | Internet ka code kya tha? | `find_saved(query="internet code")` (keywords hit) | "Wifi password abc123." |
@@ -224,7 +224,7 @@ Rules for combined questions:
 
 ### 6.6 Lists
 
-| # | You ask | Tool call | Buddy answers |
+| # | You ask | Tool call | Umbrella answers |
 |---|---|---|---|
 | 1 | Shopping list mein kya hai? | `list_show(shopping)` | "Ande, bread, aloo 2 kg (doodh le liya)." |
 | 2 | Kya-kya lena baaki hai? | `list_show(shopping)` | "3 cheezein: ande, bread, aloo." |
@@ -239,7 +239,7 @@ Rules for combined questions:
 
 ### 6.7 Questions across categories
 
-| # | You ask | Tool calls | Buddy answers |
+| # | You ask | Tool calls | Umbrella answers |
 |---|---|---|---|
 | 1 | Riya ke baare mein jo bhi saved hai | `find_saved(entities=["Riya"], in=all)` + `todo_list(query="Riya")` + `reminder_list(query="Riya")` | "Behen, Mumbai mein, birthday 3 May. To-do: Friday ko gift order." |
 | 2 | Aaj ka kya scene hai? | `day_overview(10-19)` | "To-do: bill bharna, Amit ko call (bank kal se baaki). Reminders: aaj aur nahi. Short term: diet chal raha hai." |

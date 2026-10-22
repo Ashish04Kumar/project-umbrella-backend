@@ -1,5 +1,5 @@
 /*
- * Robot plugin: the Buddy 3D robot head for the web playground.
+ * Robot plugin: the Umbrella 3D robot head for the web playground.
  *
  * A port of the Synq app's Buddy tab robot (mobile/src/features/buddy/robot/: robotModel.ts,
  * robotState.ts, RobotFace.tsx, RobotCanvas.tsx) from react-three-fiber to plain three.js:
@@ -11,7 +11,7 @@
  * Plugin contract (see playground.html): mount(container, bus) and the bus sends
  *   "state"      idle | listening | thinking | speaking | error
  *   "expression" a reply mood (shown for a while after the reply, longer while speaking)
- *   "level"      0..1 loudness: the user's mic while listening, Buddy's voice while speaking
+ *   "level"      0..1 loudness: the user's mic while listening, Umbrella's voice while speaking
  */
 
 import * as THREE from "three";
@@ -291,7 +291,7 @@ export function mount(container, bus) {
   container.classList.add("robot-plugin");
   const label = document.createElement("div");
   label.className = "robot-label";
-  label.textContent = "Loading Buddy…";
+  label.textContent = "Loading Umbrella…";
   container.append(label);
 
   let renderer;

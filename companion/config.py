@@ -81,7 +81,7 @@ class Settings:
     # Front-end plugins the server offers to the playground (folders in companion/server/plugins).
     ui_plugins: list[str] = field(default_factory=lambda: _list("COMPANION_UI_PLUGINS", "robot"))
 
-    name: str = field(default_factory=lambda: _env("COMPANION_NAME", "Buddy"))
+    name: str = field(default_factory=lambda: _env("COMPANION_NAME", "Umbrella"))
     timezone: str = field(default_factory=lambda: _env("COMPANION_TIMEZONE", "Asia/Kolkata"))
 
     # How much chat goes into each prompt; older messages are folded into a summary.

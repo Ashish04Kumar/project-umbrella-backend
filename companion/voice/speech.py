@@ -15,7 +15,7 @@ from ..guard import claims_human_life, looks_broken, mentions_silence
 _SENTENCE_END = re.compile(r"([.!?।…]+[\"'”’)\]]*)(\s+|$)")
 _TAG = re.compile(r"^\s*\[([a-zA-Z_]+)\]\s*")
 _ANY_TAG = re.compile(ANY_TAG_PATTERN, re.IGNORECASE)
-_SPEAKER = re.compile(r"^\s*(assistant|buddy)\s*:\s*", re.IGNORECASE)
+_SPEAKER = re.compile(r"^\s*(assistant|buddy|umbrella)\s*:\s*", re.IGNORECASE)
 MAX_SPOKEN_WORDS = 70
 
 

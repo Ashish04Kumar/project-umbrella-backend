@@ -1,8 +1,8 @@
-"""A simulated consumer who chats with Buddy for a test run.
+"""A simulated consumer who chats with Umbrella for a test run.
 
 Another LLM plays the user (Rohan, a working professional) through a normal day. A list of intents
-makes sure every feature gets used, but the consumer writes the words, answers Buddy's questions
-first ("When should I remind you?" -> "8 pm") and reacts to what Buddy said. The run happens in the
+makes sure every feature gets used, but the consumer writes the words, answers Umbrella's questions
+first ("When should I remind you?" -> "8 pm") and reacts to what Umbrella said. The run happens in the
 chosen consumer's own chat; every step is published to the trace, so the playground's Test tab can
 show what goes to the LLM and what comes back, live.
 """
@@ -27,13 +27,13 @@ log = logging.getLogger("companion.testing")
 # A weekday in Rohan's life, easy to medium. One intent per message; the order follows the day.
 INTENTS: list[str] = [
     "Say hi and mention how the morning is going (small talk).",
-    "Ask Buddy to remember long term: your name is Rohan and you live in Pune.",
-    "Ask Buddy to remember long term: your mom's birthday is on 14 November.",
+    "Ask Umbrella to remember long term: your name is Rohan and you live in Pune.",
+    "Ask Umbrella to remember long term: your mom's birthday is on 14 November.",
     "Ask for a reminder to call mom tonight at 8 pm.",
     "Add milk, bread and bananas to your shopping list.",
     "Add an important to-do for today: submit the expense report.",
-    "Tell Buddy to keep short term: you lent Karan 500 rupees today.",
-    "Ask Buddy to note down your gym locker code: 4721.",
+    "Tell Umbrella to keep short term: you lent Karan 500 rupees today.",
+    "Ask Umbrella to note down your gym locker code: 4721.",
     "Small talk: you are tired, too many meetings today.",
     "Ask what is on your shopping list.",
     "Add eggs to the shopping list too.",
@@ -45,28 +45,28 @@ INTENTS: list[str] = [
     "Ask how much money you lent Karan.",
     "Say you bought the milk and bananas.",
     "Ask for your gym number, without saying 'locker code'.",
-    "Ask Buddy to remember long term that you are allergic to peanuts.",
-    "Ask for a quick dinner idea (Buddy should keep your allergy in mind).",
+    "Ask Umbrella to remember long term that you are allergic to peanuts.",
+    "Ask for a quick dinner idea (Umbrella should keep your allergy in mind).",
     "Change the call-mom reminder to 9 pm.",
     "Ask which reminders you have.",
-    "Say Karan paid the money back, so Buddy can forget it.",
+    "Say Karan paid the money back, so Umbrella can forget it.",
     "Ask a general question: how many steps a day are healthy?",
-    "Ask Buddy to note an idea: start sketching on weekends.",
+    "Ask Umbrella to note an idea: start sketching on weekends.",
     "Ask what is planned for tomorrow.",
-    "Ask what Buddy knows about you.",
-    "Ask Buddy to clear your shopping list (say yes if it asks).",
+    "Ask what Umbrella knows about you.",
+    "Ask Umbrella to clear your shopping list (say yes if it asks).",
     "Say good night.",
 ]
 
-PERSONA = """You play Rohan, 29, a product designer in Pune, texting Buddy, his personal AI companion app, during a normal day.
+PERSONA = """You play Rohan, 29, a product designer in Pune, texting Umbrella, his personal AI companion app, during a normal day.
 Write ONLY Rohan's next message, like a real person texting: short (1-2 sentences), casual, sometimes a small typo.
 Commands and questions about saved things are mostly in English; small talk can be Hinglish.
-Never say you are testing or role-playing. Do not repeat Buddy's words back.
-You are the USER, never the assistant: you ask Buddy to do things. Never write as if you already did them
+Never say you are testing or role-playing. Do not repeat Umbrella's words back.
+You are the USER, never the assistant: you ask Umbrella to do things. Never write as if you already did them
 ("Sure, added eggs", "I'll set a reminder", "Updated it") and never answer your own question.
 
 Each time you get the chat so far and the next thing Rohan wants to do.
-- If Buddy's last message asked Rohan something (a time, yes/no, which one), answer that first and naturally;
+- If Umbrella's last message asked Rohan something (a time, yes/no, which one), answer that first and naturally;
   then set "covers_intent" to false unless your message also does the next thing.
 - Otherwise write a message that does the next thing, and set "covers_intent" to true.
 
@@ -129,7 +129,7 @@ async def run(bot: Companion, test: TestRun) -> None:
             turn = uuid.uuid4().hex[:8]
             # The chat as stored, so questions the owner typed in between are part of what Rohan sees.
             rows = await bot.store.latest_messages(test.user_id, 24, test.thread)
-            chat = [("Rohan" if row["role"] == "user" else "Buddy", row["content"]) for row in rows]
+            chat = [("Rohan" if row["role"] == "user" else "Umbrella", row["content"]) for row in rows]
             try:
                 message, covers = await next_message(llm, chat, intent)
             except LLMError as exc:

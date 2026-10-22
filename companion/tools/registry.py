@@ -54,9 +54,9 @@ class ToolContext:
     store: Any             # PostgresStore (typed loosely so tests can pass a fake)
     memory: MemoryStore
     settings: Settings
-    last_assistant: str = ""   # Buddy's previous message: a "(yes/no)" question there is what a confirm answers
+    last_assistant: str = ""   # Umbrella's previous message: a "(yes/no)" question there is what a confirm answers
     user_text: str = ""        # the user's message this turn: tools check "tomorrow" / "aaj" against the date chosen
-    previous_user_text: str = ""  # their message before, used when this one answers Buddy's question ("Monday" after "remind me at 9")
+    previous_user_text: str = ""  # their message before, used when this one answers Umbrella's question ("Monday" after "remind me at 9")
 
 
 @dataclass

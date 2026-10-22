@@ -214,16 +214,16 @@
     <button id="newConv" type="button" hidden title="Open a new thread for this user. It starts empty: its own chat and memory.">＋ New thread</button>
     <button id="liveBtn" class="live" type="button" title="Real-time voice: talk freely, interrupt any time">📞 Live</button>
     <button id="traceBtn" class="trace" type="button" title="See what the agent does at every step, and its memory">🧠 Trace</button>
-    <button id="testBtn" class="trace" type="button" title="A simulated consumer chats with Buddy in a new thread; see what goes to the LLM and what comes back">🧪 Test</button>
+    <button id="testBtn" class="trace" type="button" title="A simulated consumer chats with Umbrella in a new thread; see what goes to the LLM and what comes back">🧪 Test</button>
     <span class="grow"></span>
     <label class="speed">Voice speed <input id="speed" type="range" min="0.7" max="1.4" step="0.05" value="1"> <span id="speedValue">1.00×</span></label>
     <span class="status" id="health">connecting…</span>
   </header>
 
   <section class="chat">
-    <div class="stage" id="stage" aria-label="Buddy"></div>
-    <div class="livebar" id="livebar"><span class="big" id="liveFace">🙂</span><span id="liveState">connecting…</span><span class="status">Use earphones so Buddy doesn't hear itself.</span></div>
-    <details class="livelog" id="livelog"><summary>🎛️ Turn taking, live <span class="status">(why Buddy waited, answered or stopped)</span></summary><div id="livelogList"></div></details>
+    <div class="stage" id="stage" aria-label="Umbrella"></div>
+    <div class="livebar" id="livebar"><span class="big" id="liveFace">🙂</span><span id="liveState">connecting…</span><span class="status">Use earphones so Umbrella doesn't hear itself.</span></div>
+    <details class="livelog" id="livelog"><summary>🎛️ Turn taking, live <span class="status">(why Umbrella waited, answered or stopped)</span></summary><div id="livelogList"></div></details>
     <div class="log" id="log" aria-live="polite"></div>
     <div class="tokbar" id="tokbar" title="Start counts the LLM tokens of every reply from now on; Stop freezes the total; Reset clears it.">
       <span>🪙 Tokens</span>
@@ -238,7 +238,7 @@
       <span>total <b id="tokTotal">0</b></span>
     </div>
     <form class="send" id="form">
-      <input id="text" placeholder="Buddy se baat karo… (e.g. kal 9 baje dawai yaad dilana)" autocomplete="off" required>
+      <input id="text" placeholder="Umbrella se baat karo… (e.g. kal 9 baje dawai yaad dilana)" autocomplete="off" required>
       <button class="mic" id="micBtn" type="button" title="Push-to-talk: click, speak, click again to send (words only)">🎤</button>
       <button class="mic" id="cueMicBtn" type="button" title="Push-to-talk with voice cues: like 🎤, plus how you sounded (pauses, pace, loudness...) goes to the LLM, like Live">🎙️✨</button>
       <button class="primary" id="sendBtn">Send</button>
@@ -300,12 +300,12 @@
     <button id="testClose" type="button">✕ Close</button>
   </div>
   <form class="send test-ask" id="testAsk">
-    <input id="testAskText" placeholder="Ask Buddy something yourself, as this consumer (works during a test too)" autocomplete="off" required>
+    <input id="testAskText" placeholder="Ask Umbrella something yourself, as this consumer (works during a test too)" autocomplete="off" required>
     <button class="primary" type="submit">Send</button>
   </form>
   <div class="test-cols">
-    <div class="trace-col" id="testFeed"><div class="note">Start a test: another LLM plays Rohan, a working professional, and chats with Buddy through a normal day as the chosen consumer (that consumer's own chat and memory). Each turn shows what Rohan said, the whole request sent to the LLM, what the LLM sent back, what the tools did, and Buddy's reply.</div></div>
-    <div class="trace-col" id="testIntents"><h3>Plan for the day</h3><div class="note">One intent per message. Rohan writes the words himself and answers Buddy's questions first.</div><div id="intentList"></div></div>
+    <div class="trace-col" id="testFeed"><div class="note">Start a test: another LLM plays Rohan, a working professional, and chats with Umbrella through a normal day as the chosen consumer (that consumer's own chat and memory). Each turn shows what Rohan said, the whole request sent to the LLM, what the LLM sent back, what the tools did, and Umbrella's reply.</div></div>
+    <div class="trace-col" id="testIntents"><h3>Plan for the day</h3><div class="note">One intent per message. Rohan writes the words himself and answers Umbrella's questions first.</div><div id="intentList"></div></div>
   </div>
 </section>
 
@@ -318,7 +318,7 @@ function store(key, value) {
   try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { return null; }
 }
 const userId = () => $("user").value.trim() || "ashish";
-// Which chat is open: "main" (your own ongoing chat with Buddy, never reset) or a separate thread.
+// Which chat is open: "main" (your own ongoing chat with Umbrella, never reset) or a separate thread.
 let currentThread = "main";
 // Users: every user in the database, plus "New user…". The chosen user's threads, chat, memory and
 // data load below; each thread of a user has its own memory and data.
@@ -360,7 +360,7 @@ function el(tag, cls, text) {
   return node;
 }
 
-// Buddy asked "Where should I save “…”? (reminder / to-do / …)": one button per place.
+// Umbrella asked "Where should I save “…”? (reminder / to-do / …)": one button per place.
 function placeButtons(row, text) {
   const match = /Where should I save .*\?\s*\(([^)]+)\)\s*$/.exec(text || "");
   if (!row || !match) return;
@@ -397,7 +397,7 @@ function addRow(role, text, extra = {}) {
 }
 
 // A small { } button under a chat bubble: shows the raw object of that message.
-// Your message: what went to the backend. Buddy's reply: the whole object that came back.
+// Your message: what went to the backend. Umbrella's reply: the whole object that came back.
 function attachObject(row, label, object) {
   if (!row || !object) return;
   const body = row.lastChild;
@@ -497,12 +497,12 @@ async function loadHistory() {
   $("log").textContent = "";
   try {
     const { messages } = await api(`/v1/users/${encodeURIComponent(userId())}/history?limit=40&thread=${currentThread}`);
-    if (!messages.length) addRow("assistant", "Hi! Main Buddy hoon. Kuch bhi poocho, ya kaam bolo (reminder, list, note, yaad rakhna).");
+    if (!messages.length) addRow("assistant", "Hi! Main Umbrella hoon. Kuch bhi poocho, ya kaam bolo (reminder, list, note, yaad rakhna).");
     for (const m of messages) addRow(m.role, m.content, { expression: m.expression });
   } catch (error) { addRow("assistant", "Could not load history: " + error.message); }
 }
 
-// --- Body bus: front-end plugins (the 3D robot) listen to what Buddy is doing ------------------------
+// --- Body bus: front-end plugins (the 3D robot) listen to what Umbrella is doing ------------------------
 // Events: "state" (idle | listening | thinking | speaking | error), "expression" (reply mood), "level" (0..1).
 const body = (() => {
   const handlers = {};
@@ -520,7 +520,7 @@ function bodyError() {
 // Loudness (RMS of -1..1 samples) to 0..1, like the app's mic meter: normal speech fills most of the range.
 const levelFromRms = (rms) => Math.min(1, Math.max(0, (20 * Math.log10(Math.max(rms, 1e-6)) + 50) / 42));
 
-// Buddy's voice level for the robot's mouth: computed from each WAV (20 ms steps) and read while it plays.
+// Umbrella's voice level for the robot's mouth: computed from each WAV (20 ms steps) and read while it plays.
 function voiceEnvelope(blob) {
   return blob.arrayBuffer().then((buffer) => {
     const view = new DataView(buffer);
@@ -538,7 +538,7 @@ function voiceEnvelope(blob) {
   }).catch(() => null);
 }
 
-let liveAnalyser = null;   // set during a live call: Buddy's incoming voice
+let liveAnalyser = null;   // set during a live call: Umbrella's incoming voice
 let demoMode = false;      // ?demo=robot drives the robot itself
 function levelLoop() {
   if (player && playerBusy() && player.env) {
@@ -576,7 +576,7 @@ async function streamPost(url, options, onEvent) {
   }
 }
 
-// A Buddy bubble that fills in while the reply streams: each piece is shown the moment it arrives.
+// A Umbrella bubble that fills in while the reply streams: each piece is shown the moment it arrives.
 function streamingRow() {
   const row = addRow("assistant", "", { expression: "idle" });
   row.classList.add("thinking");
@@ -661,7 +661,7 @@ function itemBox(title, sub, onDelete) {
   return box;
 }
 
-// Manual override: empty a whole store after an "are you sure?" box (Buddy asks the same in chat).
+// Manual override: empty a whole store after an "are you sure?" box (Umbrella asks the same in chat).
 function clearButton(label, body) {
   const button = el("button", "clear", "🗑 " + label);
   button.onclick = async () => {
@@ -751,11 +751,11 @@ function memoryItems(panel, user, items, empty) {
   }
 }
 
-// "What to say" for each tab: the words Buddy listens for, and example sentences (click one to put it in the box).
+// "What to say" for each tab: the words Umbrella listens for, and example sentences (click one to put it in the box).
 const SAY = {
   memory: {
     keywords: ["remember long term", "save it in memory", "forget", "what do you know about me"],
-    tip: "Lasting facts: name, city, people, birthdays, likes, projects. Say where to save it, or Buddy saves only when it is sure (otherwise it asks where).",
+    tip: "Lasting facts: name, city, people, birthdays, likes, projects. Say where to save it, or Umbrella saves only when it is sure (otherwise it asks where).",
     examples: [
       "remember long term: my name is Rohan and I live in Pune",
       "remember long term: my mom's birthday is on 14 November",
@@ -791,7 +791,7 @@ const SAY = {
   },
   reminders: {
     keywords: ["remind me", "set a reminder", "full day", "every day / every Monday / every month", "move", "cancel", "done"],
-    tip: "Say the day and the time; Buddy asks for whichever is missing. Say \"full day\" for a reminder for the whole day (said at 9:00 that morning). Due reminders are spoken, with Done and 10-minute snooze buttons.",
+    tip: "Say the day and the time; Umbrella asks for whichever is missing. Say \"full day\" for a reminder for the whole day (said at 9:00 that morning). Due reminders are spoken, with Done and 10-minute snooze buttons.",
     examples: [
       "remind me tonight at 8 to call mom",
       "remind me every day at 8 am to take vitamins",
@@ -829,7 +829,7 @@ const SAY = {
   },
   chat: {
     keywords: ["anything", "Hinglish or English", "search the web for …", "calculate …"],
-    tip: "Just talk: Buddy chats about anything, searches the web for live facts and does maths. The last 20 messages go to the LLM; older ones become a summary.",
+    tip: "Just talk: Umbrella chats about anything, searches the web for live facts and does maths. The last 20 messages go to the LLM; older ones become a summary.",
     examples: [
       "I'm tired, too many meetings today",
       "give me a quick dinner idea without peanuts",
@@ -850,7 +850,7 @@ function sayBox(name) {
   box.append(el("summary", "", "💬 What to say"));
   const body = el("div", "body");
   const kw = el("div", "kw");
-  kw.append("Words Buddy listens for: ");
+  kw.append("Words Umbrella listens for: ");
   help.keywords.forEach((word, index) => { if (index) kw.append(", "); kw.append(el("b", "", word)); });
   body.append(kw, el("div", "kw", help.tip));
   for (const example of help.examples) {
@@ -875,7 +875,7 @@ async function renderPanel() {
       memoryItems(panel, user, long_term, "Nothing yet. Try: “remember long term: my sister Riya's birthday is 3 May”.");
       if (long_term.length) panel.append(clearButton("Clear long-term memory", { store: "long" }));
       if (pending.length) {
-        panel.append(el("h3", "", "Unsure (Buddy will ask once)"));
+        panel.append(el("h3", "", "Unsure (Umbrella will ask once)"));
         for (const m of pending) panel.append(itemBox(m.text, `${m.category} · confidence ${m.confidence}`));
       }
     } else if (tab === "short") {
@@ -952,7 +952,7 @@ async function renderPanel() {
       panel.append(el("h3", "", "Messages"));
       for (const m of st.messages.slice().reverse()) {
         const where = { window: "sent to LLM", summary: "in summary", stored: "stored only" }[m.where] || m.where;
-        panel.append(itemBox(m.content, `${m.role === "user" ? "you" : "Buddy"} · ${where}`));
+        panel.append(itemBox(m.content, `${m.role === "user" ? "you" : "Umbrella"} · ${where}`));
       }
     }
   } catch (error) { panel.textContent = "Could not load: " + error.message; }
@@ -1045,39 +1045,39 @@ async function checkDue() {
 
 // --- Voice -----------------------------------------------------------------------------------
 // The mic is recorded as raw samples and sent as a 16-bit WAV clip; the server resamples it.
-let player = null;            // the <audio> currently playing Buddy's voice
+let player = null;            // the <audio> currently playing Umbrella's voice
 let recorder = null;          // { stream, context, source, node, chunks, rate }
 const speed = () => Number($("speed").value);
 $("speed").addEventListener("input", () => { $("speedValue").textContent = speed().toFixed(2) + "×"; });
 
-// For voice cues: when Buddy's voice last ended (pause before answering) and whether it is talking now.
-let buddyEndedAt = null;
+// For voice cues: when Umbrella's voice last ended (pause before answering) and whether it is talking now.
+let umbrellaEndedAt = null;
 const playerBusy = () => Boolean(player && !player.paused && !player.ended);
-// Buddy counts as talking while a sentence plays, more are queued, or the reply is still streaming.
-const buddyTalking = () => playerBusy() || audioQueue.length > 0 || voiceAbort !== null;
+// Umbrella counts as talking while a sentence plays, more are queued, or the reply is still streaming.
+const umbrellaTalking = () => playerBusy() || audioQueue.length > 0 || voiceAbort !== null;
 
-// Buddy's voice arrives one sentence at a time: play them in order.
+// Umbrella's voice arrives one sentence at a time: play them in order.
 const audioQueue = [];
 let voiceAbort = null;   // stops a push-to-talk reply that is still streaming (barge-in)
 
 function stopSpeaking() {
   audioQueue.length = 0;
   if (voiceAbort) { voiceAbort.abort(); voiceAbort = null; }
-  if (player) { if (playerBusy()) buddyEndedAt = performance.now(); player.pause(); player = null; }
+  if (player) { if (playerBusy()) umbrellaEndedAt = performance.now(); player.pause(); player = null; }
 }
 
 function playNext() {
   const blob = audioQueue.shift();
   if (!blob) {
     player = null;
-    if (!voiceAbort && !recorder) body.emit("state", "idle");   // Buddy finished talking
+    if (!voiceAbort && !recorder) body.emit("state", "idle");   // Umbrella finished talking
     return;
   }
   const audio = new Audio(URL.createObjectURL(blob));
   player = audio;
   voiceEnvelope(blob).then((env) => { audio.env = env; });
   audio.onplay = () => body.emit("state", "speaking");
-  audio.onended = () => { buddyEndedAt = performance.now(); playNext(); };
+  audio.onended = () => { umbrellaEndedAt = performance.now(); playNext(); };
   audio.play().catch(() => playNext());
 }
 
@@ -1116,10 +1116,10 @@ function encodeWav(chunks, rate) {
 const MIC_BUTTONS = { push_to_talk: ["micBtn", "🎤"], push_to_talk_cues: ["cueMicBtn", "🎙️✨"] };
 
 async function startRecording(mode = "push_to_talk") {
-  const interrupted = buddyTalking();
-  stopSpeaking();  // barge-in: talking over Buddy stops its voice
+  const interrupted = umbrellaTalking();
+  stopSpeaking();  // barge-in: talking over Umbrella stops its voice
   const startedAt = performance.now();
-  const gapMs = !interrupted && buddyEndedAt !== null ? Math.round(startedAt - buddyEndedAt) : null;
+  const gapMs = !interrupted && umbrellaEndedAt !== null ? Math.round(startedAt - umbrellaEndedAt) : null;
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
   const context = new AudioContext();
   const source = context.createMediaStreamSource(stream);
@@ -1242,8 +1242,8 @@ $("micBtn").addEventListener("click", () => micClick("push_to_talk"));
 $("cueMicBtn").addEventListener("click", () => micClick("push_to_talk_cues"));
 
 // --- Live voice (LiveKit) ------------------------------------------------------------------------
-// The server starts Buddy in a LiveKit room and returns a token; the browser joins with its mic.
-// Buddy sends small JSON messages: captions, its expression and its state.
+// The server starts Umbrella in a LiveKit room and returns a token; the browser joins with its mic.
+// Umbrella sends small JSON messages: captions, its expression and its state.
 const STATES = { listening: "👂 listening", thinking: "💭 thinking", speaking: "🗣️ speaking", idle: "🙂 your turn" };
 let live = null;  // { room, name }
 
@@ -1258,7 +1258,7 @@ function loadLiveKit() {
   });
 }
 
-let liveReply = null;   // the Buddy bubble being filled during a live reply
+let liveReply = null;   // the Umbrella bubble being filled during a live reply
 let lastLiveUserRow = null, lastLiveBotRow = null;   // where a live turn's objects are attached
 function onLiveMessage(payload) {
   let message;
@@ -1274,7 +1274,7 @@ function onLiveMessage(payload) {
   } else if (message.type === "caption_partial") {   // your words so far in this turn: shown in the input bar
     $("text").value = message.text;
     $("text").classList.add("hearing");
-  } else if (message.type === "caption_delta") {   // Buddy's words as the model writes them
+  } else if (message.type === "caption_delta") {   // Umbrella's words as the model writes them
     if (!liveReply) { liveReply = streamingRow(); liveReply.face($("liveFace").dataset.expression); }
     liveReply.add(message.text);
   } else if (message.type === "caption" && message.text) {
@@ -1318,18 +1318,18 @@ function stopLiveLog() {
 
 async function startLive() {
   $("liveBtn").disabled = true;
-  $("livebar").classList.add("on"); $("liveState").textContent = "starting Buddy…";
+  $("livebar").classList.add("on"); $("liveState").textContent = "starting Umbrella…";
   let room = null, session = null;
   try {
     const LK = await loadLiveKit();
-    // Ask for the mic first, so a refusal never leaves Buddy waiting in an empty room.
+    // Ask for the mic first, so a refusal never leaves Umbrella waiting in an empty room.
     (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop());
     session = await api("/v1/live/start", { method: "POST", body: JSON.stringify({ user_id: userId() }) });
     room = new LK.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     room.on(LK.RoomEvent.TrackSubscribed, (track) => {
       if (track.kind === LK.Track.Kind.Audio) {
         const el = track.attach(); el.dataset.live = "1"; document.body.append(el);
-        // Buddy's voice level for the robot's mouth.
+        // Umbrella's voice level for the robot's mouth.
         try {
           const ctx = new AudioContext();
           liveAnalyser = ctx.createAnalyser(); liveAnalyser.fftSize = 512;
@@ -1345,7 +1345,7 @@ async function startLive() {
     live = { room, name: session.room };
     startLiveLog();
     $("liveBtn").classList.add("on"); $("liveBtn").textContent = "End live";
-    $("liveState").textContent = "connected: Buddy will greet you";
+    $("liveState").textContent = "connected: Umbrella will greet you";
   } catch (error) {
     $("livebar").classList.remove("on");
     if (room) room.disconnect();
@@ -1444,14 +1444,14 @@ async function renderMemory() {
       stm.append(legend);
       for (const m of st.messages.slice().reverse()) {
         const row = el("div", "msg " + m.where);
-        row.append(badge(m.role === "user" ? "you" : "Buddy"), " ", short(m.content, 200));
+        row.append(badge(m.role === "user" ? "you" : "Umbrella"), " ", short(m.content, 200));
         stm.append(row);
       }
     }
     // Long-term
     const ltm = $("ltm"); ltm.textContent = "";
     ltm.append(el("div", "note",
-      `How it works: Buddy saves only when you ask (“remember long term …”, “short term …”); the automatic extractor is ${r.auto_memory ? "on" : "off"}. The same category, subject and topic update the old item instead of adding a new one. Only pinned profile facts (at most ${r.memory_in_prompt}) go with every message; everything else is fetched with the find_saved tool when you ask. Store: ${r.memory_backend}.`));
+      `How it works: Umbrella saves only when you ask (“remember long term …”, “short term …”); the automatic extractor is ${r.auto_memory ? "on" : "off"}. The same category, subject and topic update the old item instead of adding a new one. Only pinned profile facts (at most ${r.memory_in_prompt}) go with every message; everything else is fetched with the find_saved tool when you ask. Store: ${r.memory_backend}.`));
     ltm.append(el("h3", "", `Saved (${lt.memories.length})`));
     if (!lt.memories.length) ltm.append(el("div", "empty", "Nothing yet."));
     const byKind = {};
@@ -1539,9 +1539,9 @@ loadUsers().then(() => { loadHistory(); loadThreads(); renderPanel(); });
 setInterval(checkDue, 20000);
 
 // --- Test tab --------------------------------------------------------------------------------------
-// A simulated consumer (another LLM) chats with Buddy in a new thread. This tab listens to that
+// A simulated consumer (another LLM) chats with Umbrella in a new thread. This tab listens to that
 // user's trace and draws each turn: what was said, what went to the LLM, what came back, what the
-// tools did, and Buddy's reply.
+// tools did, and Umbrella's reply.
 let testSource = null;
 let testThread = null;
 let testIntents = [];
@@ -1613,7 +1613,7 @@ function renderTestEvent(event) {
     case "sim_message": {
       const { head } = testCard(turn, `#${d.number}`);
       head.append(el("span", "sub", d.intent));
-      if (!d.covers_intent) head.append(badge("answering Buddy's question first", "ask"));
+      if (!d.covers_intent) head.append(badge("answering Umbrella's question first", "ask"));
       testStep(turn, "🧑", "Rohan says", "", [el("div", "", d.text)], "sim");
       if (d.covers_intent) { testCovered += 1; drawIntents(); }
       break;
@@ -1628,7 +1628,7 @@ function renderTestEvent(event) {
       }
       break;
     case "turn_end":
-      if (testCards.get(turn)?.manual) testStep(turn, "💬", "Buddy replies", `${(d.ms / 1000).toFixed(1)} s · tools: ${(d.tools || []).join(", ") || "none"}`, [el("div", "", d.reply)], "reply");
+      if (testCards.get(turn)?.manual) testStep(turn, "💬", "Umbrella replies", `${(d.ms / 1000).toFixed(1)} s · tools: ${(d.tools || []).join(", ") || "none"}`, [el("div", "", d.reply)], "reply");
       break;
     case "context":
       testStep(turn, "🗂️", "Context loaded", `thread ${d.thread} · ${d.history} earlier messages · tool groups: ${(d.groups || []).join(", ")} · about ${d.est_prompt_tokens} prompt tokens`,
@@ -1671,7 +1671,7 @@ function renderTestEvent(event) {
       if (!String(d.note || "").startsWith("reply checked")) testStep(turn, "🛡️", "Guard changed the reply", d.note, [], "bad");
       break;
     case "sim_reply":
-      testStep(turn, "💬", "Buddy replies", `${d.provider || "fallback"} · ${(d.ms / 1000).toFixed(1)} s total · tools: ${(d.tools || []).join(", ") || "none"}`, [el("div", "", d.text)], "reply");
+      testStep(turn, "💬", "Umbrella replies", `${d.provider || "fallback"} · ${(d.ms / 1000).toFixed(1)} s total · tools: ${(d.tools || []).join(", ") || "none"}`, [el("div", "", d.text)], "reply");
       $("testStatus").textContent = `turn ${d.number} done`;
       break;
     case "sim_error":

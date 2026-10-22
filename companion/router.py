@@ -1,9 +1,9 @@
 """Which tool groups to offer the LLM for a message (keyword hint; the LLM still decides by intent).
 
 Offering only the groups a message hints at keeps the prompt small (all tools ≈ 1,800 tokens, the
-read set ≈ 600). The read tools are always offered, so questions work without keywords. Buddy's own
+read set ≈ 600). The read tools are always offered, so questions work without keywords. Umbrella's own
 last message is scanned too, so a short follow-up answer ("9 baje", "yes", "the first one") can still
-complete the action Buddy asked about. See docs/personal-data-spec.md, section 2.
+complete the action Umbrella asked about. See docs/personal-data-spec.md, section 2.
 """
 
 from __future__ import annotations
@@ -58,14 +58,14 @@ _TOOL_QUESTION = (r"when should i remind you|has already passed\. when|\(yes/no\
 
 
 def is_tool_question(text: str) -> bool:
-    """Buddy's message is one of the questions the tools ask back (time, day, AM/PM, which one, yes/no, where)."""
+    """Umbrella's message is one of the questions the tools ask back (time, day, AM/PM, which one, yes/no, where)."""
     return bool(re.search(_TOOL_QUESTION, (text or "").lower()))
 
 
 def must_use_tool(message: str, last_assistant: str = "") -> bool:
     """True when the first LLM call of this turn must call a tool: the message names a store or an action
     on one, asks about saved things, or answers a question a tool asked ("6 pm on Friday" after "When should
-    I remind you ...?"). Buddy's own casual offers do not count: "no thanks" after "Want a reminder?" must not set one."""
+    I remind you ...?"). Umbrella's own casual offers do not count: "no thanks" after "Want a reminder?" must not set one."""
     if re.search(_TOOL_QUESTION, (last_assistant or "").lower()):
         return True
     return bool(tool_groups(message) - {READ}) or asks_about_saved(message)
@@ -77,14 +77,14 @@ _DASHES = str.maketrans({ch: "-" for ch in "\u2010\u2011\u2012\u2013\u2014\u2015
 
 
 def tool_groups(message: str, last_assistant: str = "") -> set[str]:
-    """Groups hinted by the message (and by Buddy's last question, for short follow-up answers)."""
+    """Groups hinted by the message (and by Umbrella's last question, for short follow-up answers)."""
     groups = {READ}
     for text, follow_up in ((message, False), (last_assistant, True)):
         lowered = (text or "").translate(_DASHES).lower()
         if not lowered:
             continue
         if follow_up and "?" not in lowered:
-            # Buddy's last message only counts when it asked something ("When should I remind you?").
+            # Umbrella's last message only counts when it asked something ("When should I remind you?").
             # A confirmation ("Reminder set: Study…") must not offer write tools to the next "hi": a model
             # once set the same reminder again on "hi" (20 Oct).
             continue
@@ -94,7 +94,7 @@ def tool_groups(message: str, last_assistant: str = "") -> set[str]:
         found = {group for group, pattern in _GROUPS.items() if re.search(pattern, lowered)}
         groups |= found
         if follow_up:
-            # Buddy asked something: also its confirm/choice questions ("Delete all 6 ...? (yes/no)").
+            # Umbrella asked something: also its confirm/choice questions ("Delete all 6 ...? (yes/no)").
             if re.search(r"\(yes/no\)|which one|which reminder|which note|when should i remind|which day do you mean|am \(night\) or"
                            r"|which day and what time|which day should i remind|at what time", lowered):
                 groups |= found or {"short", "long", "reminder", "todo", "note", "list", "clear"}

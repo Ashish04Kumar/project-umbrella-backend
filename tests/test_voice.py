@@ -63,7 +63,7 @@ class AudioTests(unittest.TestCase):
     def test_guard(self):
         self.assertEqual(check_transcript("Thanks for watching!", 3.0, -20)[0], False)
         self.assertEqual(check_transcript("Thank you.", 0.4, -20)[0], False)
-        self.assertEqual(check_transcript("Thank you so much Buddy, that helped", 2.0, -20)[0], True)
+        self.assertEqual(check_transcript("Thank you so much Umbrella, that helped", 2.0, -20)[0], True)
         self.assertEqual(check_transcript("haan", 0.1, -20)[0], False)
         self.assertEqual(check_transcript("", 2.0, -20)[0], False)
 
@@ -136,13 +136,13 @@ class VoiceTurnTests(unittest.TestCase):
             pool = await _fresh_pool()
             llm = ScriptedLLM([LLMResult(text="[happy] Main badhiya hoon! 😊 Tum batao?")])
             tts = FakeTTS()
-            voice = Voice(SETTINGS, stt=[FakeSTT("fake-stt", "Hi Buddy, kaise ho aaj?")], tts=[tts])
+            voice = Voice(SETTINGS, stt=[FakeSTT("fake-stt", "Hi Umbrella, kaise ho aaj?")], tts=[tts])
             bot = Companion(settings=SETTINGS, llm=llm, store=PostgresStore(pool), memory=PostgresMemory(pool), voice=voice)
             clip = to_wav(np.concatenate([np.zeros(8000, np.float32), tone(1.5)]), 16000)
             turn = await bot.voice_turn("u", clip, speed=1.1)
             await bot.wait_background()
             self.assertTrue(turn.kept)
-            self.assertEqual(turn.heard, "Hi Buddy, kaise ho aaj?")
+            self.assertEqual(turn.heard, "Hi Umbrella, kaise ho aaj?")
             self.assertEqual(turn.reply.text, "Main badhiya hoon! 😊 Tum batao?")
             self.assertEqual(tts.last, ("Main badhiya hoon! Tum batao?", 1.1))   # emoji not spoken
             self.assertTrue(turn.audio_wav.startswith(b"RIFF"))

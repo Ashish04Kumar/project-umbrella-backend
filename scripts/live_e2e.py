@@ -1,9 +1,9 @@
 """Headless end-to-end check of live voice over the real LiveKit server.
 
 A Python LiveKit client joins as the "user", speaks Piper-generated sentences into the room like a
-microphone, and records what comes back: Buddy's audio, captions, expression and state messages.
+microphone, and records what comes back: Umbrella's audio, captions, expression and state messages.
 It checks the greeting, a normal turn, a pause in the middle of a sentence (one message, not two), a
-merge (going on before the reply is heard), a short "hmm" over Buddy (it keeps talking), barge-in
+merge (going on before the reply is heard), a short "hmm" over Umbrella (it keeps talking), barge-in
 (talking over a long reply) and the silence nudge.
 
     .venv/bin/python scripts/live_e2e.py
@@ -98,7 +98,7 @@ async def main() -> None:
     results: dict[str, object] = {}
 
     lines = {
-        "turn": await speech(bot, "Hi Buddy, I am a bit tired today. Can you suggest one quick way to relax?"),
+        "turn": await speech(bot, "Hi Umbrella, I am a bit tired today. Can you suggest one quick way to relax?"),
         "long": await speech(bot, "Tell me a long story about a brave little robot who travels across the whole world."),
         "cut": await speech(bot, "Wait wait, stop. Just tell me the time instead."),
         "half": await speech(bot, "Can you remind me to call my mom and"),
@@ -174,16 +174,16 @@ async def main() -> None:
     await user.say(lines["long"])
     await user.silence(1.0)
     await wait_for(lambda: user.first_audio_after is not None, 25)
-    await asyncio.sleep(2.0)  # let Buddy talk for a moment
-    # A short "hmm" over Buddy: it must keep talking.
+    await asyncio.sleep(2.0)  # let Umbrella talk for a moment
+    # A short "hmm" over Umbrella: it must keep talking.
     await user.say(lines["hmm"])
     await asyncio.sleep(1.5)
-    results["short_hmm_buddy_kept_talking"] = time.monotonic() - user.last_audio_at < 0.5
+    results["short_hmm_umbrella_kept_talking"] = time.monotonic() - user.last_audio_at < 0.5
     talking_before = time.monotonic() - user.last_audio_at < 0.5
     cut_at = time.monotonic()
     await user.say(lines["cut"])
     states_after = [m.get("state") for at, m in user.events if at >= cut_at and m["type"] == "state"]
-    results["barge_in_buddy_was_talking"] = talking_before
+    results["barge_in_umbrella_was_talking"] = talking_before
     results["barge_in_listening_state"] = "listening" in states_after
     await user.silence(1.0)
     await wait_for(lambda: len(user.captions("user")) >= 3, 25)

@@ -17,7 +17,7 @@ Conductor, plus smarter turn taking (rules in turn_policy.py):
 - one gentle silence nudge per user turn, grounded in what they last said;
 - a greeting when the user joins, support resources if they sound in danger, a time limit.
 It also sends the body small JSON messages: caption_partial (the user's words heard so far in this
-turn, for the input bar), caption_delta (Buddy's words as they are written),
+turn, for the input bar), caption_delta (Umbrella's words as they are written),
 captions (the full turn), the reply's expression and the state
 (listening / thinking / speaking / idle) so a face can react.
 """
@@ -123,7 +123,7 @@ class LiveTurns(FrameProcessor):
         self._probability_pending = False
         self._probability_seq = 0
         self._waiting_reason = ""                       # last "still waiting" reason sent to the Live log
-        self._segment_over_bot = False                  # the current stretch of speech began while Buddy talked
+        self._segment_over_bot = False                  # the current stretch of speech began while Umbrella talked
         self._over_bot: list[bool] = []                 # same order as self._segments
         self._barge_handle: asyncio.TimerHandle | None = None
         self._inflight_task: asyncio.Task | None = None # the reply being prepared or spoken
@@ -331,7 +331,7 @@ class LiveTurns(FrameProcessor):
     async def _confirm_barge_in(self, started: float) -> None:
         self._barge_handle = None
         if self._user_speaking and self._segment_started_at == started and (self._bot_speaking or self._lock.locked()):
-            await self._interrupt("barge-in", f"talked over Buddy for {BARGE_IN_SECONDS:g}s")
+            await self._interrupt("barge-in", f"talked over Umbrella for {BARGE_IN_SECONDS:g}s")
 
     async def _interrupt(self, decision: str, reason: str) -> None:
         self._cut_in = True
@@ -356,7 +356,7 @@ class LiveTurns(FrameProcessor):
         self._cues.user_stopped(now)
         if self._barge_handle is not None:
             self._cancel_barge_in()
-            self._decide("barge-in ignored", "a short sound over Buddy (under half a second)")
+            self._decide("barge-in ignored", "a short sound over Umbrella (under half a second)")
         if self._smart is not None and self._turn_audio:
             self._probability_seq += 1
             self._probability_pending = True
@@ -401,7 +401,7 @@ class LiveTurns(FrameProcessor):
             self._ensure_answer_loop()
             return
         if over_bot and is_backchannel(text) and not self._cut_in:
-            self._decide("backchannel ignored", f"{text!r} said over Buddy is not a new turn")
+            self._decide("backchannel ignored", f"{text!r} said over Umbrella is not a new turn")
             self._ensure_answer_loop()
             return
         log.info("heard %r (%s)", text, f"{segment.seconds:.1f}s of speech" if segment else "no timing")
